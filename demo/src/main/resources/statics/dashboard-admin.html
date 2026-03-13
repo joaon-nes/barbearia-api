@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barbearia - Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #F8F6F0;
+            color: #333333;
+        }
+
+        .navbar-custom {
+            background-color: #2C4E80;
+            border-bottom: 3px solid #e0dcd3;
+        }
+
+        .navbar-brand,
+        .nav-text {
+            color: #F8F6F0 !important;
+        }
+
+        .card-custom {
+            background-color: #ffffff;
+            border: 1px solid #e0dcd3;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .text-primary-custom {
+            color: #2C4E80;
+        }
+
+        .btn-outline-custom {
+            border: 1px solid #2C4E80;
+            color: #2C4E80;
+            border-radius: 20px;
+            transition: 0.3s;
+        }
+
+        .btn-outline-custom:hover {
+            background-color: #2C4E80;
+            color: #ffffff;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-custom p-3">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="#">⚙️ Painel do Admin</a>
+            <div class="d-flex align-items-center">
+                <span id="nomeAdminMaster" class="me-3 nav-text fw-bold"></span>
+                <button onclick="logout()"
+                    class="btn btn-light btn-sm rounded-pill text-primary-custom fw-bold px-3">Sair</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <h3 class="mb-4 text-primary-custom fw-bold">Visão Global do Sistema</h3>
+
+        <div class="row g-4 text-center">
+            <div class="col-md-4">
+                <div class="card card-custom p-4 h-100">
+                    <h5 class="text-muted">Usuários Cadastrados</h5>
+                    <h1 class="mt-2 text-primary-custom fw-bold" id="qtdClientes">0</h1>
+                    <button class="btn btn-sm btn-outline-custom mt-auto mx-4">Gerenciar Usuários</button>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card card-custom p-4 h-100">
+                    <h5 class="text-muted">Estabelecimentos</h5>
+                    <h1 class="mt-2 text-primary-custom fw-bold" id="qtdEstabelecimentos">0</h1>
+                    <button class="btn btn-sm btn-outline-custom mt-auto mx-4">Ver Todos</button>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card card-custom p-4 h-100">
+                    <h5 class="text-muted">Serviços do Sistema</h5>
+                    <h1 class="mt-2 text-primary-custom fw-bold">0</h1>
+                    <button class="btn btn-sm btn-outline-custom mt-auto mx-4">Configurar Serviços</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const usuarioAtual = JSON.parse(localStorage.getItem('usuarioLogado'));
+        if (!usuarioAtual || usuarioAtual.role !== 'ADMIN') {
+            window.location.href = 'login.html';
+        } else {
+            document.getElementById('nomeAdminMaster').innerText = `${usuarioAtual.nome} (Admin)`;
+        }
+
+        function logout() {
+            localStorage.removeItem('usuarioLogado');
+            window.location.href = 'login.html';
+        }
+
+        async function carregarEstatisticas() {
+            try {
+                const response = await fetch('http://localhost:8080/api/usuarios');
+                if (response.ok) {
+                    const usuarios = await response.json();
+                    const clientes = usuarios.filter(u => u.role === 'CLIENTE').length;
+                    const estabelecimentos = usuarios.filter(u => u.role === 'ESTABELECIMENTO').length;
+
+                    document.getElementById('qtdClientes').innerText = clientes;
+                    document.getElementById('qtdEstabelecimentos').innerText = estabelecimentos;
+                }
+            } catch (error) {
+                console.error("Erro ao buscar dados", error);
+            }
+        }
+        carregarEstatisticas();
+    </script>
+</body>
+
+</html>

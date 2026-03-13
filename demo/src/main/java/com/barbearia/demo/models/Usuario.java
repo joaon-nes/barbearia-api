@@ -32,4 +32,11 @@ public class Usuario {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private RoleUsuario role;
+
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private Boolean ativo = false;
+
+    private String codigoVerificacao;
+
+    private String codigo2fa;
 }

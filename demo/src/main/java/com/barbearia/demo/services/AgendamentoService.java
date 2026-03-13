@@ -19,7 +19,7 @@ public class AgendamentoService {
     }
 
     public Agendamento criar(Agendamento agendamento) {
-        if (repository.existsConflitoDeHorario(agendamento.getDataHoraInicio())) {
+        if (repository.existsByDataHoraInicioAndStatus(agendamento.getDataHoraInicio(), StatusAgendamento.AGENDADO)) {
             throw new RuntimeException("Horário indisponível!");
         }
         agendamento.setStatus(StatusAgendamento.AGENDADO);
