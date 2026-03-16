@@ -115,11 +115,80 @@ public class UsuarioController {
             if (codigo.equals(user.getCodigo2fa())) {
                 user.setCodigo2fa(null);
                 repository.save(user);
-
                 user.setSenha(null);
+
+                if (user.getRole() == RoleUsuario.ESTABELECIMENTO && !Boolean.TRUE.equals(user.getPerfilCompleto())) {
+                    return ResponseEntity.status(206).body(user);
+                }
+
                 return ResponseEntity.ok(user);
             }
         }
         return ResponseEntity.status(401).body("Código 2FA inválido!");
+    }
+
+    @PutMapping("/{id}/completar-perfil")
+    public ResponseEntity<?> completarPerfil(@PathVariable Long id, @RequestBody Usuario dadosCompletos) {
+        Optional<Usuario> userOpt = repository.findById(id);
+        if (userOpt.isPresent()) {
+            Usuario u = userOpt.get();
+            u.setNomeBarbearia(dadosCompletos.getNomeBarbearia());
+            u.setCnpj(dadosCompletos.getCnpj());
+            u.setTelefone(dadosCompletos.getTelefone());
+            u.setCep(dadosCompletos.getCep());
+            u.setRua(dadosCompletos.getRua());
+            u.setNumero(dadosCompletos.getNumero());
+            u.setBairro(dadosCompletos.getBairro());
+            u.setCidade(dadosCompletos.getCidade());
+            u.setEstado(dadosCompletos.getEstado());
+            u.setHorariosFuncionamento(dadosCompletos.getHorariosFuncionamento());
+            u.setTags(dadosCompletos.getTags());
+            u.setComodidades(dadosCompletos.getComodidades());
+            u.setLinkInstagram(dadosCompletos.getLinkInstagram());
+            u.setLinkFacebook(dadosCompletos.getLinkFacebook());
+            u.setLinkTiktok(dadosCompletos.getLinkTiktok());
+
+            u.setPerfilCompleto(true);
+
+            return ResponseEntity.ok(repository.save(u));
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    @PutMapping("/{id}/foto")
+    public ResponseEntity<?> atualizarFoto(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        Optional<Usuario> userOpt = repository.findById(id);
+        if (userOpt.isPresent()) {
+            Usuario u = userOpt.get();
+            u.setFotoPerfil(body.get("fotoPerfil"));
+            return ResponseEntity.ok(repository.save(u));
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    @PutMapping("/{id}/galeria")
+    public ResponseEntity<?> atualizarGaleria(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        Optional<Usuario> userOpt = repository.findById(id);
+        if (userOpt.isPresent()) {
+            Usuario u = userOpt.get();
+            u.setFotosGaleria(body.get("fotosGaleria"));
+            return ResponseEntity.ok(repository.save(u));
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Usuario> buscarPorId(@PathVariable Long id) {
+        return repository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping("/{id}/tags")
+    public ResponseEntity<?> atualizarTags(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        return repository.findById(id).map(u -> {
+            u.setTags(body.get("tags"));
+            return ResponseEntity.ok(repository.save(u));
+        }).orElse(ResponseEntity.notFound().build());
     }
 }

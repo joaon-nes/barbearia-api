@@ -27,4 +27,8 @@ public class Servico {
 
     @Column(nullable = false, name = "duracao_minutos")
     private Integer duracaoMinutos;
+
+    @ManyToOne
+    @JoinColumn(name = "estabelecimento_id")
+    private Usuario estabelecimento;
 }

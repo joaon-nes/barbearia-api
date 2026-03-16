@@ -1,42 +1,58 @@
 package com.barbearia.demo.models;
 
 import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
+import lombok.Data;
 
+@Data
 @Entity
 @Table(name = "usuarios")
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
 public class Usuario {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
     private String nome;
-
-    @Column(nullable = false, unique = true)
     private String email;
-
-    @Column(nullable = false)
     private String senha;
-
-    private String telefone;
+    private String codigoVerificacao;
+    private Boolean ativo;
+    private String codigo2fa;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private RoleUsuario role;
 
-    @Column(nullable = false, columnDefinition = "boolean default false")
-    private Boolean ativo = false;
+    private String nomeBarbearia;
+    private String cnpj;
+    private String telefone;
+    private String cep;
+    private String rua;
+    private String numero;
+    private String bairro;
+    private String cidade;
+    private String estado;
+    private String comodidades;
+    private String linkInstagram;
+    private String linkFacebook;
+    private String linkTiktok;
 
-    private String codigoVerificacao;
+    @Column(columnDefinition = "TEXT")
+    private String horariosFuncionamento;
 
-    private String codigo2fa;
+    @Column(columnDefinition = "boolean default false")
+    private Boolean perfilCompleto = false;
+
+    @Column(columnDefinition = "boolean default false")
+    private Boolean contaVerificada = false;
+
+    private String tags;
+
+    @Lob
+    @Column(columnDefinition = "LONGTEXT")
+    private String fotoPerfil;
+
+    @Lob
+    @Column(columnDefinition = "LONGTEXT")
+    private String fotosGaleria;
+    
 }

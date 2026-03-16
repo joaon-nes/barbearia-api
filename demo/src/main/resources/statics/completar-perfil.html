@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barbearia - Completar Perfil</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #F8F6F0;
+            color: #333333;
+        }
+
+        .app-container {
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 30px;
+            background-color: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+
+        .text-primary-custom {
+            color: #2C4E80;
+        }
+
+        .btn-custom {
+            background-color: #2C4E80;
+            color: #ffffff;
+            font-weight: bold;
+            border-radius: 25px;
+            padding: 12px;
+            width: 100%;
+        }
+
+        .btn-custom:hover {
+            background-color: #1c365d;
+            color: #ffffff;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="app-container">
+        <h3 class="text-center text-primary-custom fw-bold mb-2">Configurar Barbearia</h3>
+        <p class="text-center text-muted mb-4">Complete os seus dados para os clientes o encontrarem.</p>
+
+        <form id="formPerfil">
+            <h5 class="text-primary-custom fw-bold mt-4">Dados Principais</h5>
+            <div class="row g-2">
+                <div class="col-md-12">
+                    <input type="text" class="form-control" id="nomeBarbearia" placeholder="Nome da Barbearia *"
+                        required>
+                </div>
+                <div class="col-md-12">
+                    <input type="text" class="form-control" id="cnpj" placeholder="CNPJ (Opcional)" maxlength="18">
+                </div>
+            </div>
+
+            <h5 class="text-primary-custom fw-bold mt-4">Endereço</h5>
+            <div class="row g-2">
+                <div class="col-md-4">
+                    <input type="text" class="form-control" id="cep" placeholder="CEP *" maxlength="8" required>
+                </div>
+                <div class="col-md-8">
+                    <input type="text" class="form-control bg-light" id="rua" placeholder="Rua" readonly>
+                </div>
+                <div class="col-md-4">
+                    <input type="text" class="form-control" id="numero" placeholder="Número *" required>
+                </div>
+                <div class="col-md-4">
+                    <input type="text" class="form-control bg-light" id="bairro" placeholder="Bairro" readonly>
+                </div>
+                <div class="col-md-4">
+                    <input type="text" class="form-control bg-light" id="cidade" placeholder="Cidade" readonly>
+                </div>
+            </div>
+
+            <h5 class="text-primary-custom fw-bold mt-4">Horários de Funcionamento</h5>
+            <p class="small text-muted">Defina a abertura, intervalo e fecho (ex: 08:00 - 12:00 | 13:00 - 19:00). Deixe
+                em branco se estiver fechado.</p>
+
+            <div id="areaHorarios" class="mb-4">
+            </div>
+
+            <button type="submit" class="btn btn-custom">Salvar e Acessar o Painel</button>
+        </form>
+    </div>
+
+    <script>
+        const usuarioAtual = JSON.parse(localStorage.getItem('usuarioLogado'));
+        if (!usuarioAtual || usuarioAtual.role !== 'ESTABELECIMENTO') window.location.href = 'login.html';
+
+        document.getElementById('cep').addEventListener('blur', async (e) => {
+            let cep = e.target.value.replace(/\D/g, '');
+            if (cep.length === 8) {
+                try {
+                    let res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+                    let data = await res.json();
+                    if (!data.erro) {
+                        document.getElementById('rua').value = data.logradouro;
+                        document.getElementById('bairro').value = data.bairro;
+                        document.getElementById('cidade').value = data.localidade;
+                    } else { alert("CEP não encontrado."); }
+                } catch (err) { console.error(err); }
+            }
+        });
+
+        const diasSemana = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+        const areaHorarios = document.getElementById('areaHorarios');
+
+        diasSemana.forEach(dia => {
+            areaHorarios.innerHTML += `
+                <div class="row g-1 align-items-center mb-2 horario-row" data-dia="${dia}">
+                    <div class="col-3 fw-bold small">${dia}</div>
+                    <div class="col-2"><input type="time" class="form-control form-control-sm ab1" value="08:00"></div>
+                    <div class="col-2"><input type="time" class="form-control form-control-sm fc1" value="12:00"></div>
+                    <div class="col-1 text-center text-muted small">até</div>
+                    <div class="col-2"><input type="time" class="form-control form-control-sm ab2" value="13:00"></div>
+                    <div class="col-2"><input type="time" class="form-control form-control-sm fc2" value="19:00"></div>
+                </div>
+            `;
+        });
+
+        document.getElementById('formPerfil').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            let horarios = [];
+            document.querySelectorAll('.horario-row').forEach(row => {
+                horarios.push({
+                    dia: row.dataset.dia,
+                    abertura1: row.querySelector('.ab1').value,
+                    fechamento1: row.querySelector('.fc1').value,
+                    abertura2: row.querySelector('.ab2').value,
+                    fechamento2: row.querySelector('.fc2').value
+                });
+            });
+
+            const dadosCompletos = {
+                nomeBarbearia: document.getElementById('nomeBarbearia').value,
+                cnpj: document.getElementById('cnpj').value,
+                cep: document.getElementById('cep').value,
+                rua: document.getElementById('rua').value,
+                numero: document.getElementById('numero').value,
+                bairro: document.getElementById('bairro').value,
+                cidade: document.getElementById('cidade').value,
+                estado: "RS",
+                horariosFuncionamento: JSON.stringify(horarios)
+            };
+
+            try {
+                const response = await fetch(`http://localhost:8080/api/usuarios/${usuarioAtual.id}/completar-perfil`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dadosCompletos)
+                });
+
+                if (response.ok) {
+                    const userAtualizado = await response.json();
+                    localStorage.setItem('usuarioLogado', JSON.stringify(userAtualizado));
+                    alert("Perfil configurado com sucesso!");
+                    window.location.href = 'dashboard-estabelecimento.html';
+                }
+            } catch (error) { alert("Erro ao salvar perfil."); }
+        });
+    </script>
+</body>
+
+</html>

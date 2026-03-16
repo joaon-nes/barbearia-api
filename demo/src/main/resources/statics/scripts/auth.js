@@ -21,7 +21,7 @@ if (formCadastro) {
             });
 
             if (response.ok) {
-                alert('Conta criada com sucesso! Você já pode fazer login.');
+                alert('Conta criada com sucesso! Verifique o seu e-mail para ativar a conta antes de iniciar sessão.');
                 window.location.href = 'login.html';
             } else {
                 const erro = await response.text();
@@ -91,28 +91,40 @@ if (form2FA) {
                 body: JSON.stringify(payload)
             });
 
-            if (response.ok) {
+            if (response.ok || response.status === 206) {
                 const usuarioData = await response.json();
-                finalizarLogin(usuarioData);
+
+                if (response.status === 206) {
+                    localStorage.setItem('usuarioLogado', JSON.stringify(usuarioData));
+                    window.location.href = 'completar-perfil.html';
+                } else {
+                    finalizarLogin(usuarioData);
+                }
             } else {
                 const erro = await response.text();
                 alert(erro);
             }
         } catch (error) {
-            alert("Erro ao validar 2FA.");
+            alert("Erro ao validar o código 2FA.");
         }
     });
 }
 
 function finalizarLogin(usuarioData) {
     localStorage.setItem('usuarioLogado', JSON.stringify(usuarioData));
+
+    if (usuarioData.role === 'ESTABELECIMENTO' && !usuarioData.perfilCompleto) {
+        window.location.href = 'completar-perfil.html';
+        return;
+    }
+
     alert(`Bem-vindo, ${usuarioData.nome}!`);
 
     if (usuarioData.role === 'ADMIN') {
         window.location.href = 'dashboard-admin.html';
     } else if (usuarioData.role === 'ESTABELECIMENTO') {
-        window.location.href = 'dashboard-estabelecimento.html';
+        window.location.href = 'estabelecimento.html';
     } else {
-        window.location.href = 'dashboard-cliente.html';
+        window.location.href = 'cliente.html';
     }
 }

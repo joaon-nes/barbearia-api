@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barber App - Cliente</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        ::-webkit-scrollbar {
+            display: none;
+        }
+
+        * {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        body {
+            background-color: #F8F6F0;
+            color: #333333;
+            padding-bottom: 80px;
+        }
+
+        .app-container {
+            max-width: 480px;
+            margin: 0 auto;
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        .navbar-custom {
+            background-color: #2C4E80;
+            color: #ffffff;
+            border-bottom-left-radius: 20px;
+            border-bottom-right-radius: 20px;
+            padding: 15px 20px;
+        }
+
+        .card-custom {
+            background: white;
+            border-radius: 15px;
+            border: 1px solid #e0dcd3;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 480px;
+            background-color: #ffffff;
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            z-index: 1000;
+            box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-item {
+            text-align: center;
+            color: #aaa;
+            text-decoration: none;
+            font-size: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            transition: 0.3s;
+            flex: 1;
+        }
+
+        .nav-item.active {
+            color: #2C4E80;
+            font-weight: bold;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        .agendamento-card {
+            background: white;
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            border: 1px solid #eee;
+        }
+
+        .status-badge {
+            font-size: 0.7rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        #view-barbearia {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            min-height: 100vh;
+            background: #F8F6F0;
+            z-index: 1040;
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+            }
+
+            to {
+                transform: translateX(0);
+            }
+        }
+
+        .capa {
+            height: 220px;
+            background: #2C4E80;
+            background-size: cover;
+            background-position: center;
+            border-bottom-left-radius: 30px;
+            border-bottom-right-radius: 30px;
+            position: relative;
+        }
+
+        .btn-back {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            border: none;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+        }
+
+        .time-badge {
+            padding: 8px 12px;
+            border-radius: 10px;
+            border: 1px solid #2C4E80;
+            color: #2C4E80;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .time-badge.active {
+            background: #2C4E80;
+            color: white;
+        }
+
+        .time-badge.disabled {
+            background: #eee;
+            color: #ccc;
+            border-color: #eee;
+            text-decoration: line-through;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .date-card {
+            min-width: 65px;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            padding: 8px;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .date-card.active {
+            background: #2C4E80;
+            color: white;
+        }
+
+        .tag-badge {
+            background-color: #e2e8f0;
+            color: #2C4E80;
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 12px;
+            margin-right: 5px;
+            display: inline-block;
+        }
+
+        .comodidade-badge {
+            border: 1px solid #ddd;
+            font-size: 0.8rem;
+            padding: 5px 10px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #555;
+        }
+
+        .star-rating i {
+            font-size: 1.5rem;
+            color: #ddd;
+            cursor: pointer;
+        }
+
+        .star-rating i.active {
+            color: #ffc107;
+        }
+
+        .social-icon {
+            font-size: 1.2rem;
+            color: #2C4E80;
+            text-decoration: none;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 35px;
+            height: 35px;
+            background: #e2e8f0;
+            border-radius: 50%;
+        }
+
+        .social-icon:hover {
+            background: #2C4E80;
+            color: white;
+        }
+
+        #modalImagemAmpliada {
+            z-index: 1065 !important;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="app-container">
+        <div id="main-view">
+            <div class="navbar-custom d-flex justify-content-between align-items-center mb-4">
+                <h5 class="m-0 fw-bold">💈 Barber Discover</h5>
+                <div id="headerAuth"></div>
+            </div>
+            <div class="container px-3">
+                <div id="tab-descubra" class="tab-content active">
+                    <div id="listaBarbearias"></div>
+                </div>
+                <div id="tab-agenda" class="tab-content">
+                    <h5 class="fw-bold mb-3">Meus Agendamentos</h5>
+                    <h6 class="fw-bold text-muted small mt-3 mb-2">Futuros</h6>
+                    <div id="agsFuturos"></div>
+                    <h6 class="fw-bold text-muted small mt-4 mb-2">Últimos</h6>
+                    <div id="agsUltimos"></div>
+                </div>
+                <div id="tab-perfil" class="tab-content">
+                    <div class="card card-custom p-4 text-center">
+                        <div class="bg-primary text-white rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center"
+                            style="width: 70px; height: 70px; font-size: 1.5rem;" id="letraAvatar">U</div>
+                        <h5 id="nomePerfil" class="m-0">Usuário</h5>
+                        <p class="text-muted small mb-3" id="emailPerfil"></p>
+                        <button onclick="logout()" class="btn btn-outline-danger w-100 rounded-pill">Sair</button>
+                    </div>
+                </div>
+            </div>
+            <div class="bottom-nav">
+                <div class="nav-item active" onclick="mudarAba('descubra', this)"><i
+                        class="bi bi-compass fs-4"></i><span>Explorar</span></div>
+                <div class="nav-item" onclick="mudarAba('agenda', this)"><i
+                        class="bi bi-calendar-check fs-4"></i><span>Agendamentos</span></div>
+                <div class="nav-item" onclick="mudarAba('perfil', this)"><i
+                        class="bi bi-person fs-4"></i><span>Perfil</span></div>
+            </div>
+        </div>
+
+        <div id="view-barbearia">
+            <div class="capa" id="capaBar"><button onclick="fecharBarbearia()" class="btn-back"><i
+                        class="bi bi-arrow-left"></i></button></div>
+            <div class="container p-4" style="margin-top: -40px;">
+                <div class="card card-custom p-4 shadow-sm mb-4">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h4 class="fw-bold text-primary-custom mb-0" id="nomeBar">Barbearia</h4>
+                        <div id="badgeEstrelasTopo" style="display: none;"></div>
+                    </div>
+                    <div id="tagsBar" class="mb-2"></div>
+                    <p class="small text-muted mb-2" id="endBar"></p>
+
+                    <div class="d-flex align-items-center justify-content-between">
+                        <p class="small text-primary-custom m-0 fw-bold"><i class="bi bi-whatsapp me-1"></i> <span
+                                id="telBar"></span></p>
+                        <div id="sociaisBar" class="d-flex gap-2"></div>
+                    </div>
+                </div>
+
+                <h6 class="fw-bold mb-3">Serviços</h6>
+                <div class="card card-custom p-3 shadow-sm mb-4">
+                    <div id="listaServicos"></div>
+                    <button onclick="abrirModalAgendamento()"
+                        class="btn btn-primary w-100 rounded-pill fw-bold mt-3 py-2"><i
+                            class="bi bi-calendar-plus me-2"></i> Agendar Horário</button>
+                </div>
+
+                <div id="sectionComodidades" style="display: none;">
+                    <h6 class="fw-bold mb-3">Este espaço oferece</h6>
+                    <div class="d-flex flex-wrap gap-2 mb-4" id="listaComodidades"></div>
+                </div>
+
+                <h6 class="fw-bold mb-3">Galeria</h6>
+                <div class="d-flex overflow-x-auto gap-2 pb-2 mb-4" id="galeriaBar"></div>
+
+                <h6 class="fw-bold mb-3" id="tituloAvaliacoesBar">Avaliações</h6>
+                <div class="mb-5 pb-5" id="avaliacoesBar"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalAgendamento" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-body p-4">
+                    <h5 class="fw-bold mb-3">Agendar Horário</h5>
+                    <label class="small fw-bold text-muted mb-1">1. Escolha o Serviço</label>
+                    <select class="form-select mb-4 rounded-3" id="selectServico" onchange="aoMudarServico()">
+                        <option value="">Selecione...</option>
+                    </select>
+                    <div id="areaDataHora" style="display: none;">
+                        <label class="small fw-bold text-muted mb-1">2. Escolha a Data</label>
+                        <div class="d-flex overflow-x-auto gap-2 pb-2 mb-4" id="modalDatas"></div>
+                        <label class="small fw-bold text-muted mb-1">3. Escolha o Horário</label>
+                        <div id="areaHorariosList" style="display: none;">
+                            <h6 class="fw-bold small mb-2 mt-2">Manhã</h6>
+                            <div class="d-flex flex-wrap gap-2 mb-3" id="modalHorasManha"></div>
+                            <h6 class="fw-bold small mb-2">Tarde</h6>
+                            <div class="d-flex flex-wrap gap-2 mb-4" id="modalHorasTarde"></div>
+                        </div>
+                    </div>
+                    <button id="btnConfirmar" disabled onclick="finalizarReserva()"
+                        class="btn btn-primary w-100 rounded-pill p-3 fw-bold mt-2">Confirmar Agendamento</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalAvaliar" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-body p-4 text-center">
+                    <h5 class="fw-bold mb-1">Avaliar Atendimento</h5>
+                    <p class="small text-muted mb-3" id="nomeBarAvaliar"></p>
+                    <div class="star-rating mb-3" id="estrelasContainer">
+                        <i class="bi bi-star-fill" onclick="setNota(1)"></i><i class="bi bi-star-fill"
+                            onclick="setNota(2)"></i>
+                        <i class="bi bi-star-fill" onclick="setNota(3)"></i><i class="bi bi-star-fill"
+                            onclick="setNota(4)"></i><i class="bi bi-star-fill" onclick="setNota(5)"></i>
+                    </div>
+                    <input type="hidden" id="notaSelecionada" value="0">
+                    <input type="hidden" id="idAgendamentoAvaliar">
+                    <textarea class="form-control mb-4 rounded-3" id="comentarioAvaliacao" rows="3"
+                        placeholder="O que achou do serviço?"></textarea>
+                    <button onclick="enviarAvaliacao()" class="btn btn-primary w-100 rounded-pill fw-bold">Enviar
+                        Feedback</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalImagemAmpliada" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content bg-transparent border-0">
+                <div class="modal-header border-0 justify-content-end p-2"><button type="button"
+                        class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+                <div class="modal-body text-center p-0"><img id="imgAmpliadaSrc" src=""
+                        class="img-fluid rounded-3 shadow-lg" style="max-height: 80vh;"></div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="modalGaleriaCompleta" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-header pb-2 border-bottom-0">
+                    <h5 class="fw-bold m-0">Galeria de Fotos</h5><button type="button" class="btn-close"
+                        data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body pt-0">
+                    <div class="d-flex flex-wrap gap-2 justify-content-center" id="gradeGaleriaCompleta"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const user = JSON.parse(localStorage.getItem('usuarioLogado'));
+        let estCache = {}, servCache = {}, agsOcupados = [];
+        let estSel, srvSelId, dataSel, horaSel, todosAgsGlobal = [];
+
+        function formatarDataRelativa(dataStr) {
+            if (!dataStr) return '';
+            const dataObj = new Date(dataStr); const hoje = new Date(); const diffTime = Math.abs(hoje - dataObj); const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            if (diffDays === 0 && hoje.getDate() === dataObj.getDate()) return 'Hoje';
+            if (diffDays === 1 || (diffDays === 0 && hoje.getDate() !== dataObj.getDate())) return 'Ontem';
+            if (diffDays < 7) { const diasSemana = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']; return diasSemana[dataObj.getDay()]; }
+            return dataObj.toLocaleDateString('pt-PT');
+        }
+
+        function formatarTelefone(v) {
+            if (!v) return "";
+            v = v.replace(/\D/g, "");
+            if (v.length === 11) return `(${v.slice(0, 2)}) ${v.slice(2, 3)} ${v.slice(3, 7)}-${v.slice(7)}`;
+            if (v.length === 10) return `(${v.slice(0, 2)}) ${v.slice(2, 6)}-${v.slice(6)}`;
+            return v;
+        }
+
+        const iconesComodidades = { "WiFi": "bi-wifi", "Ar-condicionado": "bi-snow", "Café": "bi-cup-hot", "Bebidas": "bi-cup-straw", "TV": "bi-tv", "Estacionamento": "bi-p-circle" };
+
+        function renderizarPerfil() {
+            let badge = user.contaVerificada ? ' <i class="bi bi-patch-check-fill text-primary" title="Conta Verificada"></i>' : '';
+            document.getElementById('headerAuth').innerHTML = `Olá, ${user.nome.split(' ')[0]}${badge}`;
+            document.getElementById('nomePerfil').innerHTML = `${user.nome}${badge}`;
+            document.getElementById('emailPerfil').innerText = user.email;
+            document.getElementById('letraAvatar').innerText = user.nome.charAt(0).toUpperCase();
+        }
+
+        if (user) { renderizarPerfil(); } else { document.getElementById('headerAuth').innerHTML = `<a href="login.html" class="btn btn-sm btn-light rounded-pill px-3">Entrar</a>`; }
+        function logout() { localStorage.clear(); window.location.href = 'login.html'; }
+
+        function mudarAba(id, el) {
+            if (!user && id !== 'descubra') { window.location.href = 'login.html'; return; }
+            document.querySelectorAll('.tab-content, .nav-item').forEach(x => x.classList.remove('active'));
+            document.getElementById(`tab-${id}`).classList.add('active'); el.classList.add('active');
+            if (id === 'agenda') carregarMeusAgs();
+        }
+
+        async function carregarBarbearias() {
+            try {
+                const resAgs = await fetch('http://localhost:8080/api/agendamentos');
+                todosAgsGlobal = await resAgs.json();
+                const resU = await fetch('http://localhost:8080/api/usuarios');
+                const ests = (await resU.json()).filter(u => u.role === 'ESTABELECIMENTO' && u.perfilCompleto);
+                const container = document.getElementById('listaBarbearias'); container.innerHTML = '';
+
+                for (let e of ests) {
+                    estCache[e.id] = e;
+                    const resS = await fetch(`http://localhost:8080/api/servicos/estabelecimento/${e.id}`);
+                    servCache[e.id] = await resS.json();
+
+                    let avaliacoesDesseEst = todosAgsGlobal.filter(a => a.estabelecimento?.id === e.id && a.notaAvaliacao != null);
+                    let badgeMedia = '';
+                    if (avaliacoesDesseEst.length > 0) {
+                        let soma = avaliacoesDesseEst.reduce((acc, curr) => acc + curr.notaAvaliacao, 0);
+                        let media = (soma / avaliacoesDesseEst.length).toFixed(1);
+                        badgeMedia = `<span class="fw-bold"><i class="bi bi-star-fill text-warning"></i> ${media} <span class="text-muted fw-normal small">(${avaliacoesDesseEst.length})</span></span>`;
+                    }
+
+                    let min = servCache[e.id].length ? Math.min(...servCache[e.id].map(s => s.preco)) : 0;
+                    let foto = e.fotoPerfil ? `background-image: url(${e.fotoPerfil}); background-size: cover;` : `background: #2C4E80;`;
+                    let tagsHtml = e.tags ? `<div class="mb-2">` + e.tags.split(',').map(t => `<span class="tag-badge">${t.trim()}</span>`).join('') + `</div>` : '';
+
+                    container.innerHTML += `<div class="card card-custom p-3 mb-3 shadow-sm" style="cursor: pointer;" onclick="abrirBarbearia(${e.id})">
+                        <div style="height: 120px; border-radius: 12px; ${foto}" class="mb-2"></div>
+                        <div class="d-flex justify-content-between align-items-center mb-1"><h5 class="fw-bold text-primary-custom m-0">${e.nomeBarbearia}</h5> ${badgeMedia}</div>
+                        ${tagsHtml}
+                        <p class="text-muted small m-0">${e.rua}, ${e.numero} - ${e.bairro}</p>
+                        <div class="mt-2 text-primary-custom small fw-bold">Valores a partir de R$ ${min.toFixed(2)}</div>
+                    </div>`;
+                }
+            } catch (e) { document.getElementById('listaBarbearias').innerHTML = '<div class="alert alert-danger mt-4 text-center">Erro ao conectar ao servidor.</div>'; }
+        }
+
+        async function abrirBarbearia(id) {
+            estSel = estCache[id];
+            document.getElementById('main-view').style.display = 'none'; document.getElementById('view-barbearia').style.display = 'block';
+            document.getElementById('capaBar').style.backgroundImage = estSel.fotoPerfil ? `url(${estSel.fotoPerfil})` : 'none';
+            document.getElementById('nomeBar').innerText = estSel.nomeBarbearia;
+            document.getElementById('endBar').innerText = `${estSel.rua}, ${estSel.numero} - ${estSel.bairro}`;
+            document.getElementById('telBar').innerText = formatarTelefone(estSel.telefone) || 'Sem contacto';
+            document.getElementById('tagsBar').innerHTML = estSel.tags ? estSel.tags.split(',').map(t => `<span class="tag-badge">${t.trim()}</span>`).join('') : '';
+
+            let sociaisHtml = '';
+            if (estSel.linkInstagram) sociaisHtml += `<a href="${estSel.linkInstagram}" target="_blank" class="social-icon"><i class="bi bi-instagram"></i></a>`;
+            if (estSel.linkFacebook) sociaisHtml += `<a href="${estSel.linkFacebook}" target="_blank" class="social-icon"><i class="bi bi-facebook"></i></a>`;
+            if (estSel.linkTiktok) sociaisHtml += `<a href="${estSel.linkTiktok}" target="_blank" class="social-icon"><i class="bi bi-tiktok"></i></a>`;
+            document.getElementById('sociaisBar').innerHTML = sociaisHtml;
+
+            if (estSel.comodidades) {
+                document.getElementById('sectionComodidades').style.display = 'block';
+                document.getElementById('listaComodidades').innerHTML = estSel.comodidades.split(',').map(c => {
+                    let ico = iconesComodidades[c.trim()] || "bi-check-circle";
+                    return `<div class="comodidade-badge"><i class="bi ${ico} text-primary"></i> ${c.trim()}</div>`;
+                }).join('');
+            } else { document.getElementById('sectionComodidades').style.display = 'none'; }
+
+            document.getElementById('listaServicos').innerHTML = servCache[id].map((s, idx) => `<div class="d-flex justify-content-between align-items-center py-2 ${idx !== servCache[id].length - 1 ? 'border-bottom' : ''}"><div><h6 class="fw-bold m-0">${s.nome}</h6><small class="text-muted">${s.duracaoMinutos} min</small></div><div class="fw-bold text-primary">R$ ${s.preco.toFixed(2)}</div></div>`).join('');
+
+            const galeriaDiv = document.getElementById('galeriaBar');
+            if (estSel.fotosGaleria) {
+                try {
+                    let fotos = JSON.parse(estSel.fotosGaleria);
+                    if (Array.isArray(fotos) && fotos.length > 0) {
+                        estSel.fotosArray = fotos; let html = ''; let limite = Math.min(fotos.length, 3);
+                        for (let i = 0; i < limite; i++) {
+                            if (i === 2 && fotos.length > 3) html += `<div style="position: relative; cursor: pointer; flex-shrink: 0;" onclick="abrirGaleriaCompleta()"><img src="${fotos[i]}" class="rounded-3 shadow-sm" style="width: 130px; height: 130px; object-fit: cover; filter: brightness(0.4);"><div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-weight: bold; font-size: 1.5rem;">+${fotos.length - 3}</div></div>`;
+                            else html += `<img src="${fotos[i]}" onclick="abrirImagemAmpliada('${fotos[i]}')" class="rounded-3 shadow-sm" style="width: 130px; height: 130px; object-fit: cover; flex-shrink: 0; cursor: pointer;">`;
+                        }
+                        galeriaDiv.innerHTML = html;
+                    } else galeriaDiv.innerHTML = '<p class="small text-muted m-0">Nenhuma foto.</p>';
+                } catch (e) { }
+            } else { galeriaDiv.innerHTML = '<p class="small text-muted m-0">Nenhuma foto.</p>'; }
+
+            agsOcupados = todosAgsGlobal.filter(a => a.estabelecimento?.id === id && a.status === 'AGENDADO');
+            let avs = todosAgsGlobal.filter(a => a.estabelecimento?.id === id && a.notaAvaliacao != null).sort((a, b) => b.dataHoraInicio.localeCompare(a.dataHoraInicio));
+
+            if (avs.length > 0) {
+                let soma = avs.reduce((acc, curr) => acc + curr.notaAvaliacao, 0);
+                let media = (soma / avs.length).toFixed(1);
+                let topBadge = document.getElementById('badgeEstrelasTopo');
+                topBadge.innerHTML = `<span class="fw-bold"><i class="bi bi-star-fill text-warning"></i> ${media} <span class="text-muted fw-normal small">(${avs.length})</span></span>`;
+                topBadge.style.display = 'block';
+                document.getElementById('tituloAvaliacoesBar').innerText = `Avaliações`;
+            } else { document.getElementById('badgeEstrelasTopo').style.display = 'none'; document.getElementById('tituloAvaliacoesBar').innerText = `Avaliações`; }
+
+            let avDiv = document.getElementById('avaliacoesBar');
+            if (avs.length > 0) {
+                avDiv.innerHTML = avs.map(a => {
+                    let badgeVerificado = a.cliente?.contaVerificada ? ' <i class="bi bi-patch-check-fill text-primary" title="Verificado"></i>' : '';
+                    let dAvaliacao = formatarDataRelativa(a.dataAvaliacao || a.dataHoraInicio);
+                    let respostaHTML = a.respostaAvaliacao ? `<div class="bg-light p-3 mt-3 rounded-3 border-start border-3 border-primary"><div class="d-flex justify-content-between align-items-center mb-1"><strong class="small">${estSel.nomeBarbearia}</strong><small class="text-muted" style="font-size:0.65rem;">${formatarDataRelativa(a.dataResposta)}</small></div><p class="small text-muted m-0">${a.respostaAvaliacao}</p></div>` : '';
+
+                    return `<div class="card p-3 mb-2 border-0 bg-white shadow-sm rounded-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div><strong class="small">${a.cliente?.nome.split(' ')[0]}${badgeVerificado}</strong> <small class="text-muted ms-1" style="font-size: 0.7rem;">${dAvaliacao}</small></div>
+                            <span class="text-warning small">${'⭐'.repeat(a.notaAvaliacao)}</span>
+                        </div>
+                        <p class="small m-0 mt-2">${a.comentarioAvaliacao}</p>
+                        ${respostaHTML}
+                    </div>`;
+                }).join('');
+            } else { avDiv.innerHTML = '<p class="small text-muted m-0">Ainda não há avaliações.</p>'; }
+        }
+
+        function fecharBarbearia() { document.getElementById('view-barbearia').style.display = 'none'; document.getElementById('main-view').style.display = 'block'; }
+        function abrirImagemAmpliada(src) { document.getElementById('imgAmpliadaSrc').src = src; new bootstrap.Modal('#modalImagemAmpliada').show(); }
+        function abrirGaleriaCompleta() { document.getElementById('gradeGaleriaCompleta').innerHTML = (estSel.fotosArray || []).map(f => `<img src="${f}" onclick="abrirImagemAmpliada('${f}')" class="rounded-3 shadow-sm" style="width: 140px; height: 140px; object-fit: cover; cursor: pointer;">`).join(''); new bootstrap.Modal('#modalGaleriaCompleta').show(); }
+
+        function abrirModalAgendamento() {
+            if (!user) { window.location.href = 'login.html'; return; }
+            dataSel = null; horaSel = null; srvSelId = null; document.getElementById('btnConfirmar').disabled = true; document.getElementById('areaDataHora').style.display = 'none'; document.getElementById('areaHorariosList').style.display = 'none';
+            document.getElementById('selectServico').innerHTML = '<option value="">Selecione o serviço...</option>' + servCache[estSel.id].map(s => `<option value="${s.id}">${s.nome} - R$ ${s.preco.toFixed(2)} (${s.duracaoMinutos}m)</option>`).join('');
+            const container = document.getElementById('modalDatas'); container.innerHTML = '';
+            let hoje = new Date(); const dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+            for (let i = 0; i < 14; i++) { let d = new Date(hoje); d.setDate(hoje.getDate() + i); let iso = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0]; container.innerHTML += `<div class="date-card" id="d-${iso}" onclick="selData('${iso}', '${d.getDay()}')"><small>${dias[d.getDay()]}</small><br><strong>${d.getDate()}</strong></div>`; }
+            new bootstrap.Modal('#modalAgendamento').show();
+        }
+
+        function aoMudarServico() { srvSelId = document.getElementById('selectServico').value; if (srvSelId) { document.getElementById('areaDataHora').style.display = 'block'; if (dataSel) document.getElementById(`d-${dataSel}`).click(); } else { document.getElementById('areaDataHora').style.display = 'none'; document.getElementById('btnConfirmar').disabled = true; } }
+
+        function selData(iso, dIdx) {
+            dataSel = iso; horaSel = null; document.getElementById('btnConfirmar').disabled = true; document.querySelectorAll('.date-card').forEach(x => x.classList.remove('active')); document.getElementById(`d-${iso}`).classList.add('active'); document.getElementById('areaHorariosList').style.display = 'block';
+            let srvInfo = servCache[estSel.id].find(x => x.id == srvSelId); let doubleSlot = srvInfo && srvInfo.duracaoMinutos > 30;
+            const diasL = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']; let config = JSON.parse(estSel.horariosFuncionamento || '[]').find(x => x.dia === diasL[dIdx == 0 ? 6 : dIdx - 1]);
+            const mDiv = document.getElementById('modalHorasManha'); const tDiv = document.getElementById('modalHorasTarde'); mDiv.innerHTML = ''; tDiv.innerHTML = '';
+            if (!config || (!config.abertura1 && !config.abertura2)) { mDiv.innerHTML = '<small class="text-danger">Fechado</small>'; return; }
+            const agora = new Date(); const hojeIso = new Date(agora.getTime() - (agora.getTimezoneOffset() * 60000)).toISOString().split('T')[0]; const hrAtual = agora.getHours().toString().padStart(2, '0') + ":" + agora.getMinutes().toString().padStart(2, '0');
+            let ocupados = agsOcupados.filter(a => a.dataHoraInicio.startsWith(iso)).map(a => a.dataHoraInicio.split('T')[1].substring(0, 5));
+            const isBl = (t) => ocupados.includes(t) || (iso === hojeIso && t <= hrAtual);
+            function addS(ab, fe, tg) {
+                if (!ab || !fe) { tg.innerHTML = '<small class="text-muted">Sem horários</small>'; return; } let [h, m] = ab.split(':').map(Number), [fh, fm] = fe.split(':').map(Number); let hs = false, poss = [];
+                while (h < fh || (h === fh && m < fm)) { poss.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`); m += 30; if (m >= 60) { m = 0; h++; } }
+                poss.forEach(t => { hs = true; let bl = isBl(t); if (!bl && doubleSlot) { let [nh, nm] = t.split(':').map(Number); nm += 30; if (nm >= 60) { nm = 0; nh++; } let nt = `${nh.toString().padStart(2, '0')}:${nm.toString().padStart(2, '0')}`; if (isBl(nt) || !poss.includes(nt)) bl = true; } tg.innerHTML += `<div class="time-badge ${bl ? 'disabled' : ''}" onclick="${bl ? '' : 'selHora(\'' + t + '\', this)'}">${t}</div>`; });
+                if (!hs) tg.innerHTML = '<small class="text-muted">Indisponível</small>';
+            }
+            addS(config.abertura1, config.fechamento1, mDiv); addS(config.abertura2, config.fechamento2, tDiv);
+        }
+        function selHora(txt, el) { horaSel = txt; document.querySelectorAll('.time-badge').forEach(x => x.classList.remove('active')); el.classList.add('active'); document.getElementById('btnConfirmar').disabled = false; }
+        async function finalizarReserva() { await fetch('http://localhost:8080/api/agendamentos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dataHoraInicio: `${dataSel}T${horaSel}:00`, cliente: { id: user.id }, estabelecimento: { id: estSel.id }, servico: { id: parseInt(srvSelId) } }) }); alert("Agendado com Sucesso!"); location.reload(); }
+
+        async function carregarMeusAgs() {
+            const res = await fetch('http://localhost:8080/api/agendamentos');
+            const meus = (await res.json()).filter(a => a.cliente?.id === user.id).sort((a, b) => b.dataHoraInicio.localeCompare(a.dataHoraInicio));
+            const futuros = meus.filter(m => m.status === 'AGENDADO'); const ultimos = meus.filter(m => m.status !== 'AGENDADO');
+
+            const renderCard = (m) => {
+                const dt = new Date(m.dataHoraInicio);
+                let cor = m.status === 'CONCLUIDO' ? "#198754" : m.status === 'CANCELADO' ? "#dc3545" : "#ffc107";
+                let label = m.status === 'CONCLUIDO' ? "Concluído" : m.status === 'CANCELADO' ? "Cancelado" : "Agendado";
+                let btnAcao = m.status === 'AGENDADO' ? `<button onclick="cancAg(${m.id})" class="btn btn-sm btn-outline-danger w-100 rounded-pill mt-2">Cancelar Horário</button>` : '';
+                if (m.status === 'CONCLUIDO' && !m.notaAvaliacao) btnAcao = `<button onclick="abrirModalAvaliar(${m.id}, '${m.estabelecimento?.nomeBarbearia}')" class="btn btn-sm btn-outline-primary w-100 rounded-pill mt-2"><i class="bi bi-star"></i> Avaliar</button>`;
+                else if (m.status === 'CONCLUIDO' && m.notaAvaliacao) btnAcao = `<div class="text-center mt-2 small text-warning">${'⭐'.repeat(m.notaAvaliacao)}</div>`;
+
+                return `<div class="agendamento-card">
+                    <div class="d-flex justify-content-between mb-2"><div><h6 class="fw-bold m-0">${m.servico?.nome}</h6><small class="text-muted">${m.estabelecimento?.nomeBarbearia}</small></div><span class="status-badge" style="background: ${cor}22; color: ${cor}">${label}</span></div>
+                    <div class="small text-muted"><i class="bi bi-calendar3"></i> ${dt.toLocaleDateString()} <i class="bi bi-clock ms-2"></i> ${dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                    ${btnAcao}
+                </div>`;
+            };
+            document.getElementById('agsFuturos').innerHTML = futuros.length ? futuros.map(renderCard).join('') : '<p class="small text-muted">Nenhum agendamento futuro.</p>';
+            document.getElementById('agsUltimos').innerHTML = ultimos.length ? ultimos.map(renderCard).join('') : '<p class="small text-muted">Nenhum histórico.</p>';
+        }
+
+        async function cancAg(id) { if (!confirm("Cancelar horário?")) return; await fetch(`http://localhost:8080/api/agendamentos/${id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'CANCELADO' }) }); carregarMeusAgs(); }
+        function abrirModalAvaliar(id, nome) { document.getElementById('idAgendamentoAvaliar').value = id; document.getElementById('nomeBarAvaliar').innerText = nome; document.getElementById('comentarioAvaliacao').value = ''; setNota(0); new bootstrap.Modal('#modalAvaliar').show(); }
+        function setNota(n) { document.getElementById('notaSelecionada').value = n; let s = document.getElementById('estrelasContainer').children; for (let i = 0; i < 5; i++) { if (i < n) s[i].classList.add('active'); else s[i].classList.remove('active'); } }
+        async function enviarAvaliacao() { let i = document.getElementById('idAgendamentoAvaliar').value, n = document.getElementById('notaSelecionada').value, c = document.getElementById('comentarioAvaliacao').value; if (n == 0) { alert("Selecione as estrelas!"); return; } await fetch(`http://localhost:8080/api/agendamentos/${i}/avaliar`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nota: parseInt(n), comentario: c }) }); alert("Enviado!"); location.reload(); }
+
+        carregarBarbearias();
+    </script>
+</body>
+
+</html>

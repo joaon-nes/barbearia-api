@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Gestão - Barbearia</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        ::-webkit-scrollbar {
+            display: none;
+        }
+
+        * {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        body {
+            background-color: #F8F6F0;
+            color: #333333;
+            padding-bottom: 80px;
+        }
+
+        .app-container {
+            max-width: 600px;
+            margin: 0 auto;
+            min-height: 100vh;
+            background-color: #F8F6F0;
+        }
+
+        .navbar-custom {
+            background-color: #2C4E80;
+            color: #ffffff;
+            border-bottom-left-radius: 20px;
+            border-bottom-right-radius: 20px;
+            padding: 15px 20px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .text-primary-custom {
+            color: #2C4E80;
+        }
+
+        .card-custom {
+            background-color: #ffffff;
+            border: 1px solid #e0dcd3;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .btn-custom {
+            background-color: #2C4E80;
+            color: #ffffff;
+            font-weight: bold;
+            border-radius: 20px;
+            transition: 0.3s;
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 600px;
+            background-color: #ffffff;
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            z-index: 1000;
+        }
+
+        .nav-item {
+            text-align: center;
+            color: #aaa;
+            text-decoration: none;
+            font-size: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            transition: 0.3s;
+            flex: 1;
+        }
+
+        .nav-item.active {
+            color: #2C4E80;
+            font-weight: bold;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .date-scroll {
+            display: flex;
+            overflow-x: auto;
+            gap: 10px;
+            padding-bottom: 10px;
+        }
+
+        .date-card {
+            min-width: 75px;
+            text-align: center;
+            padding: 10px;
+            border-radius: 15px;
+            border: 1px solid #e0dcd3;
+            cursor: pointer;
+            transition: 0.2s;
+            background-color: white;
+        }
+
+        .date-card.active {
+            background-color: #2C4E80;
+            color: white;
+            border-color: #2C4E80;
+            box-shadow: 0 4px 8px rgba(44, 78, 128, 0.3);
+        }
+
+        .capa-barbearia {
+            height: 140px;
+            background-color: #2C4E80;
+            border-radius: 15px;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .btn-upload-foto {
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="app-container">
+        <div class="navbar-custom d-flex justify-content-between align-items-center mb-4">
+            <h5 class="m-0 fw-bold" id="nomeAdmin">Painel Gestão</h5>
+            <button onclick="logout()"
+                class="btn btn-light btn-sm rounded-pill text-primary-custom fw-bold px-3">Sair</button>
+        </div>
+
+        <div class="container px-3">
+
+            <div id="tab-agenda" class="tab-content active">
+                <div class="capa-barbearia mb-4 shadow-sm" id="capaBarbearia">
+                    <button class="btn-upload-foto" onclick="document.getElementById('inputFoto').click()"><i
+                            class="bi bi-camera me-1"></i> Alterar Foto</button>
+                    <input type="file" id="inputFoto" accept="image/*" style="display: none;"
+                        onchange="alterarFoto(event)">
+                </div>
+                <h4 class="text-primary-custom fw-bold mb-2">Agenda</h4>
+                <div class="date-scroll mb-3" id="agendaDatasContainer"></div>
+                <div class="card card-custom p-3">
+                    <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                        <h6 class="text-muted fw-bold m-0" id="tituloDataSelecionada">Hoje</h6>
+                        <span class="badge bg-success" id="lucroEstimadoData">Faturado: R$ 0,00</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle m-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Hora</th>
+                                    <th>Cliente</th>
+                                    <th>Serviço</th>
+                                    <th class="text-end">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaAgenda"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-servicos" class="tab-content">
+                <h4 class="text-primary-custom fw-bold mb-3">Portfólio & Tags</h4>
+                <div class="card card-custom p-3 mb-4 border-0 shadow-sm rounded-4">
+                    <div class="mb-3">
+                        <label class="small fw-bold">Especialidades (Tags separadas por vírgula)</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="editTags"
+                                placeholder="Ex: Cabelo, Barba, Platinado">
+                            <button class="btn btn-outline-primary" onclick="salvarTags()"><i class="bi bi-check2"></i>
+                                Salvar</button>
+                        </div>
+                    </div>
+                    <h6 class="fw-bold text-primary-custom mb-3 border-bottom pb-2 mt-4"><i
+                            class="bi bi-images me-1"></i> Galeria de Fotos</h6>
+                    <input type="file" id="inputGaleria" accept="image/*" multiple style="display: none;"
+                        onchange="adicionarFotosGaleria(event)">
+                    <button type="button" class="btn btn-outline-primary btn-sm mb-3 w-100"
+                        onclick="document.getElementById('inputGaleria').click()"><i class="bi bi-upload"></i> Carregar
+                        Novas Fotos</button>
+                    <div class="d-flex overflow-x-auto gap-2 pb-2" id="editGaleriaContainer"></div>
+                </div>
+
+                <h4 class="text-primary-custom fw-bold mb-3 mt-4">Lista de Serviços</h4>
+                <div class="card card-custom p-3 mb-4 bg-light border-0">
+                    <h6 class="text-primary-custom fw-bold mb-3" id="tituloFormServico"><i
+                            class="bi bi-plus-circle me-1"></i> Adicionar Novo</h6>
+                    <form id="formServico" class="row g-2">
+                        <input type="hidden" id="idServicoEdicao">
+                        <div class="col-12"><input type="text" class="form-control" id="nomeServico"
+                                placeholder="Serviço" required></div>
+                        <div class="col-6">
+                            <div class="input-group"><span class="input-group-text">R$</span><input type="number"
+                                    class="form-control" id="precoServico" step="0.01" required></div>
+                        </div>
+                        <div class="col-6">
+                            <div class="input-group"><input type="number" class="form-control" id="duracaoServico"
+                                    placeholder="30" required><span class="input-group-text">min</span></div>
+                        </div>
+                        <div class="col-12 mt-2 d-flex gap-2">
+                            <button type="submit" class="btn btn-custom w-100" id="btnSalvarServico">Salvar</button>
+                            <button type="button" class="btn btn-outline-secondary w-50" id="btnCancelarEdicao"
+                                style="display:none;" onclick="cancelarEdicaoServico()">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+                <div id="listaServicos"></div>
+            </div>
+
+            <div id="tab-avaliacoes" class="tab-content">
+                <h4 class="text-primary-custom fw-bold mb-3">Avaliações Recebidas</h4>
+                <div id="listaAvaliacoesContainer"></div>
+            </div>
+
+            <div id="tab-perfil" class="tab-content">
+                <h4 class="text-primary-custom fw-bold mb-3">Sua Barbearia</h4>
+                <form id="formEditarPerfil">
+
+                    <div class="card bg-white p-3 mb-3 border-0 shadow-sm rounded-4">
+                        <h6 class="fw-bold text-primary-custom mb-3 border-bottom pb-2"><i
+                                class="bi bi-info-circle me-1"></i> Dados e Endereço</h6>
+                        <div class="mb-3"><label class="small fw-bold">Nome da Barbearia</label><input type="text"
+                                class="form-control form-control-sm" id="editNomeBarbearia" required></div>
+                        <div class="mb-3"><label class="small fw-bold">Telefone/WhatsApp</label><input type="text"
+                                class="form-control form-control-sm" id="editTelefone" placeholder="(DDD) 9 9999-9999"
+                                required></div>
+
+                        <label class="small fw-bold mt-2">Endereço</label>
+                        <div class="row g-2 mb-2">
+                            <div class="col-4"><input type="text" class="form-control form-control-sm" id="editCep"
+                                    placeholder="CEP" onblur="buscarCepEdit(this.value)"></div>
+                            <div class="col-8"><input type="text" class="form-control form-control-sm bg-light"
+                                    id="editRua" placeholder="Rua" readonly></div>
+                            <div class="col-4"><input type="text" class="form-control form-control-sm" id="editNumero"
+                                    placeholder="Nº"></div>
+                            <div class="col-8"><input type="text" class="form-control form-control-sm bg-light"
+                                    id="editBairro" placeholder="Bairro" readonly></div>
+                        </div>
+                    </div>
+
+                    <div class="card bg-white p-3 mb-3 border-0 shadow-sm rounded-4">
+                        <h6 class="fw-bold text-primary-custom mb-3 border-bottom pb-2"><i class="bi bi-share me-1"></i>
+                            Redes Sociais</h6>
+                        <div class="input-group input-group-sm mb-2"><span class="input-group-text bg-light border-0"><i
+                                    class="bi bi-instagram text-danger"></i></span><input type="url"
+                                class="form-control" id="editInstagram" placeholder="Link do Instagram"></div>
+                        <div class="input-group input-group-sm mb-2"><span class="input-group-text bg-light border-0"><i
+                                    class="bi bi-facebook text-primary"></i></span><input type="url"
+                                class="form-control" id="editFacebook" placeholder="Link do Facebook"></div>
+                        <div class="input-group input-group-sm"><span class="input-group-text bg-light border-0"><i
+                                    class="bi bi-tiktok text-dark"></i></span><input type="url" class="form-control"
+                                id="editTiktok" placeholder="Link do TikTok"></div>
+                    </div>
+
+                    <div class="card bg-white p-3 mb-3 border-0 shadow-sm rounded-4">
+                        <h6 class="fw-bold text-primary-custom mb-3 border-bottom pb-2"><i class="bi bi-star me-1"></i>
+                            Comodidades</h6>
+                        <div class="row g-2 mb-2" id="areaComodidades">
+                            <div class="col-6">
+                                <div class="form-check"><input class="form-check-input com-check" type="checkbox"
+                                        value="WiFi" id="cWifi"><label class="form-check-label small" for="cWifi"><i
+                                            class="bi bi-wifi"></i> Wi-Fi</label></div>
+                            </div>
+                            <div class="col-6">
+                                <div class="form-check"><input class="form-check-input com-check" type="checkbox"
+                                        value="Ar-condicionado" id="cAr"><label class="form-check-label small"
+                                        for="cAr"><i class="bi bi-snow"></i> Ar-condicionado</label></div>
+                            </div>
+                            <div class="col-6">
+                                <div class="form-check"><input class="form-check-input com-check" type="checkbox"
+                                        value="Café" id="cCafe"><label class="form-check-label small" for="cCafe"><i
+                                            class="bi bi-cup-hot"></i> Café</label></div>
+                            </div>
+                            <div class="col-6">
+                                <div class="form-check"><input class="form-check-input com-check" type="checkbox"
+                                        value="Bebidas" id="cBebidas"><label class="form-check-label small"
+                                        for="cBebidas"><i class="bi bi-cup-straw"></i> Bebidas Geladas</label></div>
+                            </div>
+                            <div class="col-6">
+                                <div class="form-check"><input class="form-check-input com-check" type="checkbox"
+                                        value="TV" id="cTv"><label class="form-check-label small" for="cTv"><i
+                                            class="bi bi-tv"></i> TV / Jogos</label></div>
+                            </div>
+                            <div class="col-6">
+                                <div class="form-check"><input class="form-check-input com-check" type="checkbox"
+                                        value="Estacionamento" id="cEst"><label class="form-check-label small"
+                                        for="cEst"><i class="bi bi-p-circle"></i> Estacionamento</label></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card bg-white p-3 mb-4 border-0 shadow-sm rounded-4">
+                        <h6 class="fw-bold text-primary-custom mb-3 border-bottom pb-2"><i class="bi bi-clock me-1"></i>
+                            Horários</h6>
+                        <div id="editAreaHorarios"></div>
+                    </div>
+
+                    <button type="submit" class="btn btn-custom w-100 p-3 shadow-sm">Salvar Todas as Alterações</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="bottom-nav">
+            <div class="nav-item active" onclick="mudarAba('agenda', this)"><i
+                    class="bi bi-calendar-check fs-4"></i><span>Agenda</span></div>
+            <div class="nav-item" onclick="mudarAba('servicos', this)"><i
+                    class="bi bi-scissors fs-4"></i><span>Serviços</span></div>
+            <div class="nav-item position-relative" onclick="mudarAba('avaliacoes', this)"><i
+                    class="bi bi-star fs-4"></i><span>Avaliações</span><span id="badgeNotificacao"
+                    class="position-absolute top-0 start-50 translate-middle badge rounded-pill bg-danger"
+                    style="display: none; font-size: 0.6rem;">0</span></div>
+            <div class="nav-item" onclick="mudarAba('perfil', this)"><i
+                    class="bi bi-shop fs-4"></i><span>Barbearia</span></div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalResponder" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-body p-4 text-center">
+                    <h5 class="fw-bold mb-3">Responder Cliente</h5><input type="hidden"
+                        id="idAgendamentoResponder"><textarea class="form-control mb-4 rounded-3" id="textoResposta"
+                        rows="4" placeholder="Escreva a sua resposta pública aqui..."></textarea><button
+                        onclick="enviarResposta()" class="btn btn-primary w-100 rounded-pill fw-bold">Enviar
+                        Resposta</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const usuarioAtual = JSON.parse(localStorage.getItem('usuarioLogado'));
+        let todosMeusAgendamentos = [], servicosCache = [], fotosGaleriaAtual = [];
+
+        document.getElementById('nomeAdmin').innerText = usuarioAtual.nomeBarbearia || usuarioAtual.nome;
+        if (usuarioAtual.fotoPerfil) document.getElementById('capaBarbearia').style.backgroundImage = `url(${usuarioAtual.fotoPerfil})`;
+
+        function logout() { localStorage.clear(); window.location.href = 'login.html'; }
+
+        function formatarDataRelativa(dataStr) {
+            if (!dataStr) return '';
+            const dataObj = new Date(dataStr); const hoje = new Date(); const diffTime = Math.abs(hoje - dataObj); const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            if (diffDays === 0 && hoje.getDate() === dataObj.getDate()) return 'Hoje';
+            if (diffDays === 1 || (diffDays === 0 && hoje.getDate() !== dataObj.getDate())) return 'Ontem';
+            if (diffDays < 7) { const diasSemana = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']; return diasSemana[dataObj.getDay()]; }
+            return dataObj.toLocaleDateString('pt-PT');
+        }
+
+        function mudarAba(abaId, el) {
+            document.querySelectorAll('.tab-content, .nav-item').forEach(x => x.classList.remove('active'));
+            document.getElementById(`tab-${abaId}`).classList.add('active');
+            el.classList.add('active');
+            if (abaId === 'servicos') { carregarServicos(); document.getElementById('editTags').value = usuarioAtual.tags || ''; renderizarGaleriaEdit(); }
+            if (abaId === 'perfil') preencherFormPerfil();
+            if (abaId === 'avaliacoes') carregarAvaliacoes();
+        }
+
+        function alterarFoto(e) {
+            const reader = new FileReader(); reader.onload = async (ev) => { const base64 = ev.target.result; document.getElementById('capaBarbearia').style.backgroundImage = `url(${base64})`; await fetch(`http://localhost:8080/api/usuarios/${usuarioAtual.id}/foto`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fotoPerfil: base64 }) }); usuarioAtual.fotoPerfil = base64; localStorage.setItem('usuarioLogado', JSON.stringify(usuarioAtual)); }; reader.readAsDataURL(e.target.files[0]);
+        }
+
+        const diasMapa = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+        function inicializarDatasAgenda() {
+            const container = document.getElementById('agendaDatasContainer'); container.innerHTML = '';
+            let hoje = new Date(); let dataHojeIso = new Date(hoje.getTime() - (hoje.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+            for (let i = 0; i < 14; i++) { let d = new Date(hoje); d.setDate(hoje.getDate() + i); let dIso = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0]; container.innerHTML += `<div class="date-card ${i === 0 ? 'active' : ''}" id="cardData-${dIso}" onclick="filtrarAgendaPorData('${dIso}')"><div class="small">${diasMapa[d.getDay()]}</div><div class="fs-5">${d.getDate()}</div></div>`; }
+            buscarAgendamentosDaApi(dataHojeIso); carregarAvaliacoes(); fotosGaleriaAtual = usuarioAtual.fotosGaleria ? JSON.parse(usuarioAtual.fotosGaleria) : [];
+        }
+
+        async function buscarAgendamentosDaApi(dataIso) { const res = await fetch('http://localhost:8080/api/agendamentos'); todosMeusAgendamentos = (await res.json()).filter(ag => ag.estabelecimento?.id === usuarioAtual.id); filtrarAgendaPorData(dataIso); }
+
+        function filtrarAgendaPorData(dataIso) {
+            document.querySelectorAll('.date-card').forEach(c => c.classList.remove('active')); document.getElementById(`cardData-${dataIso}`)?.classList.add('active');
+            const ags = todosMeusAgendamentos.filter(ag => ag.dataHoraInicio.startsWith(dataIso)).sort((a, b) => a.dataHoraInicio.localeCompare(b.dataHoraInicio));
+            let lucro = 0; const tbody = document.getElementById('tabelaAgenda'); tbody.innerHTML = '';
+            ags.forEach(ag => {
+                if (ag.status === 'CONCLUIDO') lucro += ag.servico?.preco || 0;
+                let acoes = ag.status === 'AGENDADO' ? `<button onclick="mudarStatus(${ag.id}, 'CONCLUIDO', '${dataIso}')" class="btn btn-sm btn-success p-1 me-1"><i class="bi bi-check-lg"></i></button> <button onclick="mudarStatus(${ag.id}, 'CANCELADO', '${dataIso}')" class="btn btn-sm btn-outline-danger p-1"><i class="bi bi-x-lg"></i></button>` : `<span class="badge bg-light text-muted border">${ag.status === 'CONCLUIDO' ? 'Concluído' : ag.status === 'CANCELADO' ? 'Cancelado' : 'Agendado'}</span>`;
+                let badge = ag.cliente?.contaVerificada ? ' <i class="bi bi-patch-check-fill text-primary" title="Verificado"></i>' : '';
+                tbody.innerHTML += `<tr><td><strong>${ag.dataHoraInicio.split('T')[1].substring(0, 5)}</strong></td><td>${ag.cliente?.nome.split(' ')[0]}${badge}</td><td>${ag.servico?.nome}</td><td class="text-end">${acoes}</td></tr>`;
+            });
+            document.getElementById('lucroEstimadoData').innerHTML = `<small>Faturado:</small> <strong>R$ ${lucro.toFixed(2)}</strong>`;
+        }
+
+        async function carregarAvaliacoes() {
+            const res = await fetch('http://localhost:8080/api/agendamentos'); const todos = await res.json();
+            const minhasAvaliacoes = todos.filter(ag => ag.estabelecimento?.id === usuarioAtual.id && ag.notaAvaliacao != null).sort((a, b) => { let dateA = a.dataAvaliacao || a.dataHoraInicio; let dateB = b.dataAvaliacao || b.dataHoraInicio; return dateB.localeCompare(dateA); });
+            const naoRespondidas = minhasAvaliacoes.filter(ag => !ag.respostaAvaliacao).length; const badge = document.getElementById('badgeNotificacao');
+            if (naoRespondidas > 0) { badge.innerText = naoRespondidas; badge.style.display = 'block'; } else { badge.style.display = 'none'; }
+            const container = document.getElementById('listaAvaliacoesContainer');
+            if (minhasAvaliacoes.length === 0) { container.innerHTML = '<div class="text-center text-muted mt-5"><i class="bi bi-star fs-1"></i><p>Ainda não recebeu nenhuma avaliação.</p></div>'; return; }
+            container.innerHTML = minhasAvaliacoes.map(ag => {
+                let badgeVerified = ag.cliente?.contaVerificada ? ' <i class="bi bi-patch-check-fill text-primary" title="Verificado"></i>' : '';
+                let dAvaliacao = formatarDataRelativa(ag.dataAvaliacao || ag.dataHoraInicio);
+                let areaResposta = !ag.respostaAvaliacao ? `<button class="btn btn-sm btn-outline-primary mt-3" onclick="abrirModalResponder(${ag.id})">Responder Feedback</button>` : `<div class="mt-3 bg-light p-3 rounded-3 border-start border-3 border-primary"><div class="d-flex justify-content-between align-items-center mb-1"><strong class="small">${usuarioAtual.nomeBarbearia}</strong><small class="text-muted" style="font-size:0.65rem;">${formatarDataRelativa(ag.dataResposta)}</small></div><p class="small text-muted m-0">${ag.respostaAvaliacao}</p></div>`;
+                return `<div class="card card-custom p-3 mb-3 border-0 shadow-sm"><div class="d-flex justify-content-between align-items-center mb-1"><div><strong class="small">${ag.cliente?.nome.split(' ')[0]}${badgeVerified}</strong> <small class="text-muted ms-1" style="font-size: 0.7rem;">${dAvaliacao}</small></div><span class="text-warning small">${'⭐'.repeat(ag.notaAvaliacao)}</span></div><p class="small m-0 mt-2">${ag.comentarioAvaliacao}</p>${areaResposta}</div>`;
+            }).join('');
+        }
+
+        function abrirModalResponder(id) { document.getElementById('idAgendamentoResponder').value = id; document.getElementById('textoResposta').value = ''; new bootstrap.Modal('#modalResponder').show(); }
+        async function enviarResposta() { let id = document.getElementById('idAgendamentoResponder').value; let resp = document.getElementById('textoResposta').value; if (resp && resp.trim() !== '') { await fetch(`http://localhost:8080/api/agendamentos/${id}/responder-avaliacao`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ resposta: resp }) }); location.reload(); } else { alert("A resposta não pode estar vazia."); } }
+        async function mudarStatus(id, status, dataIso) { if (!confirm(`Confirmar ${status}?`)) return; await fetch(`http://localhost:8080/api/agendamentos/${id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) }); buscarAgendamentosDaApi(dataIso); }
+
+        async function carregarServicos() { const res = await fetch(`http://localhost:8080/api/servicos/estabelecimento/${usuarioAtual.id}`); servicosCache = await res.json(); document.getElementById('listaServicos').innerHTML = servicosCache.map(s => `<div class="card card-custom p-3 mb-2 d-flex flex-row justify-content-between align-items-center"><div><h6 class="fw-bold m-0">${s.nome}</h6><small>R$ ${s.preco.toFixed(2)} | ${s.duracaoMinutos}min</small></div><div><button onclick="editarServico(${s.id})" class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil"></i></button> <button onclick="eliminarServico(${s.id})" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></div></div>`).join(''); }
+        function editarServico(id) { const s = servicosCache.find(x => x.id === id); document.getElementById('idServicoEdicao').value = s.id; document.getElementById('nomeServico').value = s.nome; document.getElementById('precoServico').value = s.preco; document.getElementById('duracaoServico').value = s.duracaoMinutos; document.getElementById('btnSalvarServico').innerText = 'Atualizar'; document.getElementById('btnCancelarEdicao').style.display = 'block'; }
+        function cancelarEdicaoServico() { document.getElementById('formServico').reset(); document.getElementById('idServicoEdicao').value = ''; document.getElementById('btnSalvarServico').innerText = 'Salvar'; document.getElementById('btnCancelarEdicao').style.display = 'none'; }
+        document.getElementById('formServico').onsubmit = async (e) => { e.preventDefault(); const id = document.getElementById('idServicoEdicao').value; const dados = { nome: document.getElementById('nomeServico').value, preco: document.getElementById('precoServico').value, duracaoMinutos: document.getElementById('duracaoServico').value }; const url = id ? `http://localhost:8080/api/servicos/${id}` : `http://localhost:8080/api/servicos/estabelecimento/${usuarioAtual.id}`; await fetch(url, { method: id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) }); cancelarEdicaoServico(); carregarServicos(); };
+        async function eliminarServico(id) { if (confirm("Eliminar serviço?")) { await fetch(`http://localhost:8080/api/servicos/${id}`, { method: 'DELETE' }); carregarServicos(); } }
+
+        function renderizarGaleriaEdit() { const container = document.getElementById('editGaleriaContainer'); if (fotosGaleriaAtual.length === 0) { container.innerHTML = '<small class="text-muted">Nenhuma foto enviada.</small>'; return; } container.innerHTML = fotosGaleriaAtual.map((f, i) => `<div style="position: relative; flex-shrink: 0;"> <img src="${f}" class="rounded-3 shadow-sm" style="width: 90px; height: 90px; object-fit: cover;"> <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 p-0 shadow" style="width: 24px; height: 24px; border-radius: 50%" onclick="removerFotoGaleria(${i})"><i class="bi bi-x"></i></button> </div>`).join(''); }
+        function adicionarFotosGaleria(e) { const files = e.target.files; for (let i = 0; i < files.length; i++) { const reader = new FileReader(); reader.onload = (ev) => { fotosGaleriaAtual.push(ev.target.result); renderizarGaleriaEdit(); salvarGaleriaNoBackEnd(); }; reader.readAsDataURL(files[i]); } }
+        function removerFotoGaleria(index) { fotosGaleriaAtual.splice(index, 1); renderizarGaleriaEdit(); salvarGaleriaNoBackEnd(); }
+        async function salvarGaleriaNoBackEnd() { usuarioAtual.fotosGaleria = JSON.stringify(fotosGaleriaAtual); localStorage.setItem('usuarioLogado', JSON.stringify(usuarioAtual)); try { await fetch(`http://localhost:8080/api/usuarios/${usuarioAtual.id}/galeria`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fotosGaleria: usuarioAtual.fotosGaleria }) }); } catch (e) { } }
+
+        async function salvarTags() { let tagsVal = document.getElementById('editTags').value; usuarioAtual.tags = tagsVal; localStorage.setItem('usuarioLogado', JSON.stringify(usuarioAtual)); await fetch(`http://localhost:8080/api/usuarios/${usuarioAtual.id}/tags`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tags: tagsVal }) }); alert("Especialidades guardadas!"); }
+
+        function preencherFormPerfil() {
+            const u = usuarioAtual;
+            document.getElementById('editNomeBarbearia').value = u.nomeBarbearia || ''; document.getElementById('editTelefone').value = u.telefone || '';
+            document.getElementById('editInstagram').value = u.linkInstagram || ''; document.getElementById('editFacebook').value = u.linkFacebook || ''; document.getElementById('editTiktok').value = u.linkTiktok || '';
+            document.getElementById('editCep').value = u.cep || ''; document.getElementById('editRua').value = u.rua || ''; document.getElementById('editNumero').value = u.numero || ''; document.getElementById('editBairro').value = u.bairro || '';
+            let comodidades = u.comodidades ? u.comodidades.split(',') : []; document.querySelectorAll('.com-check').forEach(chk => { chk.checked = comodidades.includes(chk.value); });
+
+            const dias = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']; let hSalvos = JSON.parse(u.horariosFuncionamento || '[]');
+            document.getElementById('editAreaHorarios').innerHTML = dias.map(d => {
+                let c = hSalvos.find(x => x.dia === d) || { abertura1: '', fechamento1: '', abertura2: '', fechamento2: '' };
+                return `
+                <div class="mb-3 row-h border-bottom pb-2" data-dia="${d}">
+                    <div class="fw-bold text-dark small mb-1">${d}</div>
+                    <div class="d-flex gap-2">
+                        <div class="input-group input-group-sm shadow-sm"><span class="input-group-text bg-light border-0" title="Manhã"><i class="bi bi-sun text-warning"></i></span><input type="time" class="form-control a1 border-start-0" value="${c.abertura1}"><input type="time" class="form-control f1" value="${c.fechamento1}"></div>
+                        <div class="input-group input-group-sm shadow-sm"><span class="input-group-text bg-light border-0" title="Tarde"><i class="bi bi-moon text-primary"></i></span><input type="time" class="form-control a2 border-start-0" value="${c.abertura2}"><input type="time" class="form-control f2" value="${c.fechamento2}"></div>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        async function buscarCepEdit(val) { const res = await fetch(`https://viacep.com.br/ws/${val.replace(/\D/g, '')}/json/`); const d = await res.json(); if (!d.erro) { document.getElementById('editRua').value = d.logradouro; document.getElementById('editBairro').value = d.bairro; } }
+
+        document.getElementById('formEditarPerfil').onsubmit = async (e) => {
+            e.preventDefault(); let horários = []; document.querySelectorAll('.row-h').forEach(r => horários.push({ dia: r.dataset.dia, abertura1: r.querySelector('.a1').value, fechamento1: r.querySelector('.f1').value, abertura2: r.querySelector('.a2').value, fechamento2: r.querySelector('.f2').value }));
+            let comodidadesArray = []; document.querySelectorAll('.com-check:checked').forEach(chk => comodidadesArray.push(chk.value));
+
+            const dados = { nomeBarbearia: document.getElementById('editNomeBarbearia').value, telefone: document.getElementById('editTelefone').value, linkInstagram: document.getElementById('editInstagram').value, linkFacebook: document.getElementById('editFacebook').value, linkTiktok: document.getElementById('editTiktok').value, cep: document.getElementById('editCep').value, rua: document.getElementById('editRua').value, numero: document.getElementById('editNumero').value, bairro: document.getElementById('editBairro').value, cidade: usuarioAtual.cidade, estado: usuarioAtual.estado, horariosFuncionamento: JSON.stringify(horários), comodidades: comodidadesArray.join(',') };
+            const res = await fetch(`http://localhost:8080/api/usuarios/${usuarioAtual.id}/completar-perfil`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
+            const at = await res.json(); localStorage.setItem('usuarioLogado', JSON.stringify(at)); alert("Perfil Atualizado!"); window.location.reload();
+        };
+
+        inicializarDatasAgenda();
+    </script>
+</body>
+
+</html>
