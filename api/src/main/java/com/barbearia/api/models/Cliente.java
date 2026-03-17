@@ -1,4 +1,4 @@
-package com.barbearia.demo.models;
+package com.barbearia.api.models;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

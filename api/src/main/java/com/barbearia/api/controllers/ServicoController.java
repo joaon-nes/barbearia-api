@@ -1,12 +1,13 @@
-package com.barbearia.demo.controllers;
+package com.barbearia.api.controllers;
 
-import com.barbearia.demo.models.Servico;
-import com.barbearia.demo.models.Usuario;
-import com.barbearia.demo.repositories.ServicoRepository;
-import com.barbearia.demo.repositories.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import com.barbearia.api.models.Servico;
+import com.barbearia.api.models.Usuario;
+import com.barbearia.api.repositories.ServicoRepository;
+import com.barbearia.api.repositories.UsuarioRepository;
 
 import java.util.List;
 import java.util.Optional;

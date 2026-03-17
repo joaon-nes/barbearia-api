@@ -1,4 +1,4 @@
-package com.barbearia.demo.models;
+package com.barbearia.api.models;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -48,4 +48,7 @@ public abstract class Usuario {
     @Lob
     @Column(columnDefinition = "LONGTEXT")
     private String fotoPerfil;
+
+    @Column(columnDefinition = "TEXT")
+    private String diasFechados = "";
 }

@@ -1,8 +1,10 @@
-package com.barbearia.demo.controllers;
+package com.barbearia.api.controllers;
 
-import com.barbearia.demo.models.Estabelecimento;
-import com.barbearia.demo.models.Usuario;
-import com.barbearia.demo.repositories.UsuarioRepository;
+import com.barbearia.api.models.Cliente;
+import com.barbearia.api.models.Estabelecimento;
+import com.barbearia.api.models.Usuario;
+import com.barbearia.api.repositories.UsuarioRepository;
+import com.barbearia.api.services.EmailService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -10,6 +12,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Random;
 
 @RestController
 @RequestMapping("/api/usuarios")
@@ -18,6 +22,7 @@ import java.util.Map;
 public class UsuarioController {
 
     private final UsuarioRepository repository;
+    private final EmailService emailService;
 
     @GetMapping
     public ResponseEntity<List<Usuario>> listarTodos() {
@@ -33,29 +38,136 @@ public class UsuarioController {
 
     @PostMapping
     public ResponseEntity<Usuario> criar(@Valid @RequestBody Usuario usuario) {
-        return ResponseEntity.ok(repository.save(usuario));
+        usuario.setAtivo(false);
+
+        String codigo = String.format("%06d", new Random().nextInt(999999));
+        usuario.setCodigo2fa(codigo);
+
+        if (usuario instanceof Cliente) {
+            ((Cliente) usuario).setContaVerificada(false);
+        } else if (usuario instanceof Estabelecimento) {
+            ((Estabelecimento) usuario).setPerfilCompleto(false);
+        }
+
+        Usuario salvo = repository.save(usuario);
+
+        try {
+            emailService.enviarEmail(salvo.getEmail(),
+                    "Bem-vindo à Barbearia! Confirme a sua conta",
+                    "Olá " + salvo.getNome() + "!\n\nO seu código de ativação é: " + codigo
+                            + "\n\nUse este código ao fazer o primeiro login para ativar a sua conta.");
+        } catch (Exception e) {
+            System.err.println("Aviso: Falha ao enviar e-mail - " + e.getMessage());
+        }
+
+        return ResponseEntity.ok(salvo);
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody Map<String, String> credenciais) {
+        String email = credenciais.get("email");
+        String senha = credenciais.get("senha");
+
+        Optional<Usuario> userOpt = repository.findByEmail(email);
+
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(404).body("E-mail não encontrado.");
+        }
+
+        Usuario usuario = userOpt.get();
+
+        if (!usuario.getSenha().equals(senha)) {
+            return ResponseEntity.status(401).body("Palavra-passe incorreta.");
+        }
+
+        if (!Boolean.TRUE.equals(usuario.getAtivo())) {
+            if (usuario.getCodigo2fa() == null) {
+                String novoCodigo = String.format("%06d", new Random().nextInt(999999));
+                usuario.setCodigo2fa(novoCodigo);
+                repository.save(usuario);
+                try {
+                    emailService.enviarEmail(usuario.getEmail(), "Código de Ativação",
+                            "O seu novo código é: " + novoCodigo);
+                } catch (Exception ignored) {
+                }
+            }
+            return ResponseEntity.status(202)
+                    .body(Map.of("email", usuario.getEmail(), "mensagem", "Aguardando Confirmação"));
+        }
+
+        if (usuario instanceof Estabelecimento
+                && !Boolean.TRUE.equals(((Estabelecimento) usuario).getPerfilCompleto())) {
+            return ResponseEntity.status(206).body(usuario);
+        }
+
+        return ResponseEntity.ok(usuario);
+    }
+
+    @PostMapping("/validar-2fa")
+    public ResponseEntity<?> validar2fa(@RequestBody Map<String, String> dados) {
+        String email = dados.get("email");
+        String codigo = dados.get("codigo");
+
+        Optional<Usuario> userOpt = repository.findByEmail(email);
+        if (userOpt.isEmpty())
+            return ResponseEntity.status(404).body("Usuário não encontrado.");
+
+        Usuario usuario = userOpt.get();
+
+        if (usuario.getCodigo2fa() != null && usuario.getCodigo2fa().equals(codigo)) {
+            usuario.setCodigo2fa(null);
+            usuario.setAtivo(true);
+            
+            repository.save(usuario);
+
+            if (usuario instanceof Estabelecimento
+                    && !Boolean.TRUE.equals(((Estabelecimento) usuario).getPerfilCompleto())) {
+                return ResponseEntity.status(206).body(usuario);
+            }
+            return ResponseEntity.ok(usuario);
+        }
+
+        return ResponseEntity.status(401).body("Código inválido.");
     }
 
     @PutMapping("/{id}/completar-perfil")
-    public ResponseEntity<?> completarPerfil(@PathVariable Long id, @RequestBody Estabelecimento dadosCompletos) {
+    public ResponseEntity<?> completarPerfil(@PathVariable Long id, @RequestBody Map<String, Object> dadosCompletos) {
         return repository.findById(id).map(u -> {
             if (u instanceof Estabelecimento) {
                 Estabelecimento est = (Estabelecimento) u;
-                est.setNomeBarbearia(dadosCompletos.getNomeBarbearia());
-                est.setCnpj(dadosCompletos.getCnpj());
-                est.setTelefone(dadosCompletos.getTelefone());
-                est.setCep(dadosCompletos.getCep());
-                est.setRua(dadosCompletos.getRua());
-                est.setNumero(dadosCompletos.getNumero());
-                est.setBairro(dadosCompletos.getBairro());
-                est.setCidade(dadosCompletos.getCidade());
-                est.setEstado(dadosCompletos.getEstado());
-                est.setHorariosFuncionamento(dadosCompletos.getHorariosFuncionamento());
-                est.setTags(dadosCompletos.getTags());
-                est.setComodidades(dadosCompletos.getComodidades());
-                est.setLinkInstagram(dadosCompletos.getLinkInstagram());
-                est.setLinkFacebook(dadosCompletos.getLinkFacebook());
-                est.setLinkTiktok(dadosCompletos.getLinkTiktok());
+
+                if (dadosCompletos.containsKey("nomeBarbearia"))
+                    est.setNomeBarbearia((String) dadosCompletos.get("nomeBarbearia"));
+                if (dadosCompletos.containsKey("cnpj"))
+                    est.setCnpj((String) dadosCompletos.get("cnpj"));
+                if (dadosCompletos.containsKey("telefone"))
+                    est.setTelefone((String) dadosCompletos.get("telefone"));
+                if (dadosCompletos.containsKey("cep"))
+                    est.setCep((String) dadosCompletos.get("cep"));
+                if (dadosCompletos.containsKey("rua"))
+                    est.setRua((String) dadosCompletos.get("rua"));
+                if (dadosCompletos.containsKey("numero"))
+                    est.setNumero((String) dadosCompletos.get("numero"));
+                if (dadosCompletos.containsKey("bairro"))
+                    est.setBairro((String) dadosCompletos.get("bairro"));
+                if (dadosCompletos.containsKey("cidade"))
+                    est.setCidade((String) dadosCompletos.get("cidade"));
+                if (dadosCompletos.containsKey("estado"))
+                    est.setEstado((String) dadosCompletos.get("estado"));
+                if (dadosCompletos.containsKey("horariosFuncionamento"))
+                    est.setHorariosFuncionamento((String) dadosCompletos.get("horariosFuncionamento"));
+
+                Object comodidades = dadosCompletos.get("comodidades");
+                if (comodidades != null)
+                    est.setComodidades(comodidades.toString());
+
+                if (dadosCompletos.containsKey("linkInstagram"))
+                    est.setLinkInstagram((String) dadosCompletos.get("linkInstagram"));
+                if (dadosCompletos.containsKey("linkFacebook"))
+                    est.setLinkFacebook((String) dadosCompletos.get("linkFacebook"));
+                if (dadosCompletos.containsKey("linkTiktok"))
+                    est.setLinkTiktok((String) dadosCompletos.get("linkTiktok"));
+
                 est.setPerfilCompleto(true);
                 return ResponseEntity.ok(repository.save(est));
             }

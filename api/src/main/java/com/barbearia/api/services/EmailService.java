@@ -1,33 +1,36 @@
-package com.barbearia.demo.services;
+package com.barbearia.api.services;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class EmailService {
 
-    @Autowired
-    private JavaMailSender mailSender;
+    private final JavaMailSender mailSender;
 
-    public void enviarEmailConfirmacao(String para, String nome, String codigo) {
-        SimpleMailMessage mensagem = new SimpleMailMessage();
-        mensagem.setTo(para);
-        mensagem.setSubject("Confirme a sua conta - Barbearia");
-        mensagem.setText("Olá " + nome + ",\n\nObrigado por se registar!\n\n"
-                + "Clique no link abaixo para ativar a sua conta:\n"
-                + "http://localhost:8080/api/usuarios/confirmar?codigo=" + codigo);
-        mailSender.send(mensagem);
-    }
+    @Async
+    public void enviarEmail(String destinatario, String assunto, String mensagem) {
+        try {
+            System.out.println("A preparar para enviar e-mail para: " + destinatario);
+            
+            SimpleMailMessage email = new SimpleMailMessage();
+            email.setTo(destinatario);
+            email.setSubject(assunto);
+            email.setText(mensagem);
+            
+            email.setFrom("scrapertibia@gmail.com"); 
 
-    public void enviarEmail2FA(String para, String nome, String codigo2fa) {
-        SimpleMailMessage mensagem = new SimpleMailMessage();
-        mensagem.setTo(para);
-        mensagem.setSubject("Código de Acesso 2FA - Barbearia");
-        mensagem.setText(
-                "Olá " + nome + ",\n\nO seu código de verificação para aceder ao sistema é: " + codigo2fa + "\n\n"
-                        + "Este código é válido para este login.");
-        mailSender.send(mensagem);
+            mailSender.send(email);
+            System.out.println("E-mail enviado com sucesso para: " + destinatario);
+            
+        } catch (Exception e) {
+            System.err.println("FALHA CRÍTICA AO ENVIAR E-MAIL PARA " + destinatario);
+            System.err.println("Motivo do erro: " + e.getMessage());
+            e.printStackTrace(); 
+        }
     }
 }

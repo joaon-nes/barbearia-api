@@ -1,7 +1,9 @@
-package com.barbearia.demo.repositories;
+package com.barbearia.api.repositories;
 
-import com.barbearia.demo.models.Servico;
 import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.barbearia.api.models.Servico;
+
 import java.util.List;
 
 public interface ServicoRepository extends JpaRepository<Servico, Long> {

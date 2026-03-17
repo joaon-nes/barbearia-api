@@ -1,4 +1,4 @@
-package com.barbearia.demo.models;
+package com.barbearia.api.models;
 
 public enum RoleUsuario {
     ADMIN,

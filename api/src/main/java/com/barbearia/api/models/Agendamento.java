@@ -1,4 +1,4 @@
-package com.barbearia.demo.models;
+package com.barbearia.api.models;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
@@ -49,11 +49,11 @@ public class Agendamento {
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "cliente_id", nullable = false)
-    private Usuario cliente;
+    private Cliente cliente;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "estabelecimento_id", nullable = false)
-    private Usuario estabelecimento;
+    private Estabelecimento estabelecimento;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "servico_id", nullable = false)
@@ -61,4 +61,10 @@ public class Agendamento {
 
     @Column(columnDefinition = "TEXT")
     private String observacao;
+
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime dataHoraProposta;
+
+    @Column(name = "quem_sugeriu_reagendamento")
+    private String quemSugeriuReagendamento;
 }

@@ -1,4 +1,4 @@
-package com.barbearia.demo.exceptions;
+package com.barbearia.api.exceptions;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

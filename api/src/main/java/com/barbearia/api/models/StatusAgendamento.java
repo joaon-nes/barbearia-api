@@ -1,7 +1,8 @@
-package com.barbearia.demo.models;
+package com.barbearia.api.models;
 
 public enum StatusAgendamento {
     AGENDADO,
     CONCLUIDO,
-    CANCELADO
+    CANCELADO,
+    REAGENDAMENTO_PENDENTE
 }

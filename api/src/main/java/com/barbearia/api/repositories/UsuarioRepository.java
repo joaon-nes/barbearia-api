@@ -1,13 +1,14 @@
-package com.barbearia.demo.repositories;
+package com.barbearia.api.repositories;
 
-import com.barbearia.demo.models.Usuario;
+import com.barbearia.api.models.Usuario;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
 import java.util.Optional;
 
+@Repository
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
-    boolean existsByEmail(String email);
-    Optional<Usuario> findByEmailAndSenha(String email, String senha);
     
-    Optional<Usuario> findByCodigoVerificacao(String codigoVerificacao);
     Optional<Usuario> findByEmail(String email);
+    
 }
