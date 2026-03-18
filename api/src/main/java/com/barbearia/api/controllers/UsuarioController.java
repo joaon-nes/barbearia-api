@@ -5,24 +5,28 @@ import com.barbearia.api.models.Estabelecimento;
 import com.barbearia.api.models.Usuario;
 import com.barbearia.api.repositories.UsuarioRepository;
 import com.barbearia.api.services.EmailService;
+import com.barbearia.api.security.JwtService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.SecureRandom;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Random;
 
 @RestController
 @RequestMapping("/api/usuarios")
-@CrossOrigin(origins = "*")
 @RequiredArgsConstructor
 public class UsuarioController {
 
     private final UsuarioRepository repository;
     private final EmailService emailService;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
+    private final SecureRandom secureRandom = new SecureRandom();
 
     @GetMapping
     public ResponseEntity<List<Usuario>> listarTodos() {
@@ -40,7 +44,9 @@ public class UsuarioController {
     public ResponseEntity<Usuario> criar(@Valid @RequestBody Usuario usuario) {
         usuario.setAtivo(false);
 
-        String codigo = String.format("%06d", new Random().nextInt(999999));
+        usuario.setSenha(passwordEncoder.encode(usuario.getSenha()));
+
+        String codigo = String.format("%06d", secureRandom.nextInt(999999));
         usuario.setCodigo2fa(codigo);
 
         if (usuario instanceof Cliente) {
@@ -76,13 +82,13 @@ public class UsuarioController {
 
         Usuario usuario = userOpt.get();
 
-        if (!usuario.getSenha().equals(senha)) {
+        if (!passwordEncoder.matches(senha, usuario.getSenha())) {
             return ResponseEntity.status(401).body("Palavra-passe incorreta.");
         }
 
         if (!Boolean.TRUE.equals(usuario.getAtivo())) {
             if (usuario.getCodigo2fa() == null) {
-                String novoCodigo = String.format("%06d", new Random().nextInt(999999));
+                String novoCodigo = String.format("%06d", secureRandom.nextInt(999999));
                 usuario.setCodigo2fa(novoCodigo);
                 repository.save(usuario);
                 try {
@@ -95,12 +101,14 @@ public class UsuarioController {
                     .body(Map.of("email", usuario.getEmail(), "mensagem", "Aguardando Confirmação"));
         }
 
+        String token = jwtService.gerarToken(usuario);
+
         if (usuario instanceof Estabelecimento
                 && !Boolean.TRUE.equals(((Estabelecimento) usuario).getPerfilCompleto())) {
-            return ResponseEntity.status(206).body(usuario);
+            return ResponseEntity.status(206).body(Map.of("usuario", usuario, "token", token));
         }
 
-        return ResponseEntity.ok(usuario);
+        return ResponseEntity.ok(Map.of("usuario", usuario, "token", token));
     }
 
     @PostMapping("/validar-2fa")
@@ -119,12 +127,13 @@ public class UsuarioController {
             usuario.setAtivo(true);
 
             repository.save(usuario);
+            String token = jwtService.gerarToken(usuario);
 
             if (usuario instanceof Estabelecimento
                     && !Boolean.TRUE.equals(((Estabelecimento) usuario).getPerfilCompleto())) {
-                return ResponseEntity.status(206).body(usuario);
+                return ResponseEntity.status(206).body(Map.of("usuario", usuario, "token", token));
             }
-            return ResponseEntity.ok(usuario);
+            return ResponseEntity.ok(Map.of("usuario", usuario, "token", token));
         }
 
         return ResponseEntity.status(401).body("Código inválido.");

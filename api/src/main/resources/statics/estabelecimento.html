@@ -169,6 +169,18 @@
 
 <body>
 
+    <div class="toast-container position-fixed top-0 start-50 translate-middle-x p-3 mt-2" style="z-index: 1055;">
+        <div id="toastNovoAgendamento" class="toast align-items-center text-bg-success border-0 shadow-lg rounded-4"
+            role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body fw-bold" id="toastMensagem">Novo agendamento recebido!
+                </div>
+                <button type="button" class="btn-close btn-close-white me-3 m-auto" data-bs-dismiss="toast"
+                    aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+
     <div class="app-container">
         <div class="navbar-custom d-flex justify-content-between align-items-center mb-4">
             <h5 class="m-0 fw-bold" id="nomeAdmin">Painel Gestão</h5>
@@ -419,8 +431,11 @@
         </div>
 
         <div class="bottom-nav">
-            <div class="nav-item active" onclick="mudarAba('agenda', this)">
+            <div class="nav-item active position-relative" onclick="mudarAba('agenda', this)">
                 <i class="bi bi-calendar-check fs-4"></i><span>Agenda</span>
+                <span id="badgeAgenda"
+                    class="position-absolute top-0 start-50 translate-middle badge rounded-pill bg-danger"
+                    style="display: none; font-size: 0.6rem;">Novo</span>
             </div>
             <div class="nav-item" onclick="mudarAba('servicos', this)">
                 <i class="bi bi-scissors fs-4"></i><span>Serviços</span>
@@ -475,6 +490,15 @@
         let fotosGaleriaAtual = [];
         let mapaEst, markerEst;
 
+        let ultimoMaxIdAgendamento = 0;
+
+        function mostrarToast(mensagem) {
+            document.getElementById('toastMensagem').innerHTML = `${mensagem}`;
+            const toastEl = document.getElementById('toastNovoAgendamento');
+            const toast = new bootstrap.Toast(toastEl, { delay: 6000 });
+            toast.show();
+        }
+
         document.getElementById('nomeAdmin').innerText = usuarioAtual.nomeBarbearia || usuarioAtual.nome;
         if (usuarioAtual.fotoPerfil) document.getElementById('capaBarbearia').style.backgroundImage = `url(${usuarioAtual.fotoPerfil})`;
 
@@ -507,6 +531,10 @@
             document.querySelectorAll('.tab-content, .nav-item').forEach(x => x.classList.remove('active'));
             document.getElementById(`tab-${abaId}`).classList.add('active');
             el.classList.add('active');
+
+            if (abaId === 'agenda') {
+                document.getElementById('badgeAgenda').style.display = 'none';
+            }
 
             if (abaId === 'servicos') { carregarServicos(); document.getElementById('editTags').value = usuarioAtual.tags || ''; renderizarGaleriaEdit(); }
             if (abaId === 'perfil') {
@@ -556,6 +584,7 @@
 
         const diasMapa = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
+
         function inicializarDatasAgenda() {
             const container = document.getElementById('agendaDatasContainer');
             container.innerHTML = '';
@@ -578,11 +607,70 @@
             fotosGaleriaAtual = usuarioAtual.fotosGaleria ? JSON.parse(usuarioAtual.fotosGaleria) : [];
         }
 
-        async function buscarAgendamentosDaApi(dataIso) {
-            const res = await fetch('http://localhost:8080/api/agendamentos');
-            todosMeusAgendamentos = (await res.json()).filter(ag => ag.estabelecimento?.id === usuarioAtual.id);
-            filtrarAgendaPorData(dataIso);
+        async function buscarAgendamentosDaApi(dataIso = null) {
+            const res = await fetch(`http://localhost:8080/api/agendamentos/estabelecimento/${usuarioAtual.id}`);
+            todosMeusAgendamentos = await res.json();
+
+            if (ultimoMaxIdAgendamento === 0 && todosMeusAgendamentos.length > 0) {
+                ultimoMaxIdAgendamento = Math.max(...todosMeusAgendamentos.map(ag => ag.id));
+            }
+
+            if (dataIso) filtrarAgendaPorData(dataIso);
         }
+
+        async function verificarNovosAgendamentos() {
+            try {
+                const res = await fetch(`http://localhost:8080/api/agendamentos/estabelecimento/${usuarioAtual.id}`);
+                if (!res.ok) return;
+
+                const agendamentosRefresh = await res.json();
+
+                if (agendamentosRefresh.length > 0) {
+                    const maxIdAtual = Math.max(...agendamentosRefresh.map(ag => ag.id));
+
+                    if (ultimoMaxIdAgendamento > 0 && maxIdAtual > ultimoMaxIdAgendamento) {
+
+                        const novos = agendamentosRefresh.filter(ag => ag.id > ultimoMaxIdAgendamento);
+
+                        novos.forEach(novoAg => {
+                            if (novoAg.status === 'AGENDADO') {
+                                const nomeCliente = novoAg.cliente?.nome.split(' ')[0] || 'Cliente';
+
+                                const dataIso = novoAg.dataHoraInicio.split('T')[0];
+                                const hora = novoAg.dataHoraInicio.split('T')[1].substring(0, 5);
+
+                                const hojeIso = new Date().toISOString().split('T')[0];
+                                let amanhãDate = new Date();
+                                amanhãDate.setDate(amanhãDate.getDate() + 1);
+                                const amanhãIso = amanhãDate.toISOString().split('T')[0];
+
+                                let dataTexto = dataIso === hojeIso ? "Hoje" : (dataIso === amanhãIso ? "Amanhã" : dataIso.split('-').reverse().join('/'));
+
+                                mostrarToast(`Novo agendamento: <strong>${nomeCliente}</strong> para <strong>${dataTexto}</strong> às <strong>${hora}</strong>!`);
+
+                                if (!document.getElementById('tab-agenda').classList.contains('active')) {
+                                    document.getElementById('badgeAgenda').style.display = 'block';
+                                }
+                            }
+                        });
+
+                        ultimoMaxIdAgendamento = maxIdAtual;
+                        todosMeusAgendamentos = agendamentosRefresh;
+
+                        const dataAtiva = document.querySelector('.date-card.active')?.id.replace('cardData-', '');
+                        if (dataAtiva && document.getElementById('tab-agenda').classList.contains('active')) {
+                            filtrarAgendaPorData(dataAtiva);
+                        }
+                    } else if (ultimoMaxIdAgendamento === 0) {
+                        ultimoMaxIdAgendamento = maxIdAtual;
+                    }
+                }
+            } catch (e) {
+                console.error("Modo offline ou falha na verificação periódica.");
+            }
+        }
+
+        setInterval(verificarNovosAgendamentos, 10000);
 
         function filtrarAgendaPorData(dataIso) {
             document.querySelectorAll('.date-card').forEach(c => c.classList.remove('active'));
@@ -619,6 +707,11 @@
                 }
 
                 let badge = ag.cliente?.contaVerificada ? ' <i class="bi bi-patch-check-fill text-primary"></i>' : '';
+
+                let dataStrParaCalculo = (ag.status === 'REAGENDAMENTO_PENDENTE' && ag.quemSugeriuReagendamento === 'CLIENTE')
+                    ? ag.dataHoraProposta
+                    : ag.dataHoraInicio;
+
                 let infoHora = ag.status === 'REAGENDAMENTO_PENDENTE' && ag.quemSugeriuReagendamento === 'CLIENTE'
                     ? `<span class="text-danger"><del>${ag.dataHoraInicio.split('T')[1].substring(0, 5)}</del><br>${ag.dataHoraProposta.split('T')[1].substring(0, 5)}</span>`
                     : `<strong>${ag.dataHoraInicio.split('T')[1].substring(0, 5)}</strong>`;
@@ -630,6 +723,35 @@
                         <td>${ag.servico?.nome}</td>
                         <td class="text-end" style="min-width: 100px;">${acoes}</td>
                     </tr>`;
+
+                if (ag.status !== 'CANCELADO') {
+                    let duracao = ag.servico?.duracaoMinutos || 30;
+                    let blocosExtras = Math.ceil(duracao / 30) - 1;
+
+                    if (blocosExtras > 0) {
+                        let timePart = dataStrParaCalculo.split('T')[1];
+                        let h = parseInt(timePart.split(':')[0]);
+                        let m = parseInt(timePart.split(':')[1]);
+
+                        for (let i = 1; i <= blocosExtras; i++) {
+                            m += 30;
+                            if (m >= 60) {
+                                h += Math.floor(m / 60);
+                                m = m % 60;
+                            }
+
+                            let timeStr = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+
+                            tbody.innerHTML += `
+                                <tr class="table-light text-muted" style="opacity: 0.65; font-size: 0.9rem;">
+                                    <td class="border-top-0"><strong>${timeStr}</strong></td>
+                                    <td class="border-top-0" colspan="2"><i class="bi bi-arrow-return-right"></i> Continuação (${ag.cliente?.nome.split(' ')[0]})</td>
+                                    <td class="border-top-0 text-end"><span class="badge bg-secondary">Em andamento</span></td>
+                                </tr>
+                            `;
+                        }
+                    }
+                }
             });
 
             document.getElementById('lucroEstimadoData').innerHTML = `<small>Faturado:</small> <strong>R$ ${lucro.toFixed(2)}</strong>`;
@@ -649,9 +771,9 @@
         }
 
         async function carregarAvaliacoes() {
-            const res = await fetch('http://localhost:8080/api/agendamentos');
+            const res = await fetch(`http://localhost:8080/api/agendamentos/estabelecimento/${usuarioAtual.id}`);
             const todos = await res.json();
-            const minhasAvaliacoes = todos.filter(ag => ag.estabelecimento?.id === usuarioAtual.id && ag.notaAvaliacao != null).sort((a, b) => {
+            const minhasAvaliacoes = todos.filter(ag => ag.notaAvaliacao != null).sort((a, b) => {
                 let dateA = a.dataAvaliacao || a.dataHoraInicio; let dateB = b.dataAvaliacao || b.dataHoraInicio; return dateB.localeCompare(dateA);
             });
 

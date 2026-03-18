@@ -5,6 +5,7 @@ import com.barbearia.api.models.Cliente;
 import com.barbearia.api.models.Estabelecimento;
 import com.barbearia.api.models.Servico;
 import com.barbearia.api.models.StatusAgendamento;
+import com.barbearia.api.models.Usuario;
 import com.barbearia.api.repositories.AgendamentoRepository;
 import com.barbearia.api.repositories.ServicoRepository;
 import com.barbearia.api.repositories.UsuarioRepository;
@@ -42,12 +43,19 @@ public class AgendamentoService {
         Servico servico = servicoRepository.findById(agendamento.getServico().getId())
                 .orElseThrow(() -> new IllegalArgumentException("Serviço não encontrado."));
 
-        Cliente cliente = (Cliente) usuarioRepository.findById(agendamento.getCliente().getId())
+        Usuario usuarioCliente = usuarioRepository.findById(agendamento.getCliente().getId())
                 .orElseThrow(() -> new IllegalArgumentException("Cliente não encontrado."));
+        if (!(usuarioCliente instanceof Cliente)) {
+            throw new IllegalArgumentException("O ID informado não pertence a um Cliente válido.");
+        }
+        Cliente cliente = (Cliente) usuarioCliente;
 
-        Estabelecimento estabelecimento = (Estabelecimento) usuarioRepository
-                .findById(agendamento.getEstabelecimento().getId())
+        Usuario usuarioEstabelecimento = usuarioRepository.findById(agendamento.getEstabelecimento().getId())
                 .orElseThrow(() -> new IllegalArgumentException("Estabelecimento não encontrado."));
+        if (!(usuarioEstabelecimento instanceof Estabelecimento)) {
+            throw new IllegalArgumentException("O ID informado não pertence a um Estabelecimento válido.");
+        }
+        Estabelecimento estabelecimento = (Estabelecimento) usuarioEstabelecimento;
 
         agendamento.setServico(servico);
         agendamento.setCliente(cliente);
@@ -73,7 +81,41 @@ public class AgendamentoService {
         }
 
         agendamento.setStatus(StatusAgendamento.AGENDADO);
-        return repository.save(agendamento);
+        Agendamento salvo = repository.save(agendamento);
+
+        try {
+            String dataFormatada = inicioNovo.toLocalDate().toString();
+            String dataPt = dataFormatada.split("-")[2] + "/" + dataFormatada.split("-")[1] + "/"
+                    + dataFormatada.split("-")[0];
+            String horaFormatada = inicioNovo.toLocalTime().toString().substring(0, 5);
+
+            String assuntoCliente = "Confirmação de Agendamento - " + estabelecimento.getNomeBarbearia();
+            String mensagemCliente = String.format(
+                    "Olá %s,\n\nO seu agendamento foi confirmado com sucesso!\n\nDetalhes da sua marcação:\n📍 Barbearia: %s\n✂️ Serviço: %s\n📅 Data: %s\n⏰ Hora: %s\n\nAgradecemos a preferência e esperamos por si!",
+                    cliente.getNome().split(" ")[0],
+                    estabelecimento.getNomeBarbearia(),
+                    servico.getNome(),
+                    dataPt,
+                    horaFormatada);
+            emailService.enviarEmail(cliente.getEmail(), assuntoCliente, mensagemCliente);
+
+            String nomeBarbearia = estabelecimento.getNomeBarbearia() != null ? estabelecimento.getNomeBarbearia()
+                    : estabelecimento.getNome();
+            String assuntoEst = "Novo Agendamento: " + cliente.getNome().split(" ")[0] + " - " + dataPt + " às "
+                    + horaFormatada;
+            String mensagemEst = String.format(
+                    "Olá %s,\n\nVocê tem um novo agendamento!\n\n👤 Cliente: %s\n✂️ Serviço: %s\n📅 Data: %s\n⏰ Hora: %s\n\nAbra o painel de gestão para visualizar a sua agenda atualizada.",
+                    nomeBarbearia,
+                    cliente.getNome(),
+                    servico.getNome(),
+                    dataPt,
+                    horaFormatada);
+            emailService.enviarEmail(estabelecimento.getEmail(), assuntoEst, mensagemEst);
+
+        } catch (Exception e) {
+            System.err.println("Aviso: Falha ao enviar e-mail de notificação de agendamento - " + e.getMessage());
+        }
+        return salvo;
     }
 
     @Transactional
@@ -229,8 +271,9 @@ public class AgendamentoService {
             }
         }
 
-        Estabelecimento est = (Estabelecimento) usuarioRepository.findById(estabelecimentoId).orElse(null);
-        if (est != null) {
+        Usuario user = usuarioRepository.findById(estabelecimentoId).orElse(null);
+        if (user instanceof Estabelecimento) {
+            Estabelecimento est = (Estabelecimento) user;
             String dias = est.getDiasFechados();
             String dataStr = data.toString();
             if (dias == null || dias.isEmpty()) {
@@ -239,6 +282,8 @@ public class AgendamentoService {
                 est.setDiasFechados(dias + "," + dataStr);
             }
             usuarioRepository.save(est);
+        } else if (user != null) {
+            throw new IllegalArgumentException("O ID fornecido não pertence a um Estabelecimento.");
         }
 
         return cancelados;
@@ -246,12 +291,18 @@ public class AgendamentoService {
 
     @Transactional
     public void reabrirDia(Long estabelecimentoId, java.time.LocalDate data) {
-        Estabelecimento est = (Estabelecimento) usuarioRepository.findById(estabelecimentoId).orElse(null);
-        if (est != null && est.getDiasFechados() != null) {
-            String dataStr = data.toString();
-            String novosDias = est.getDiasFechados().replace(dataStr, "").replace(",,", ",").replaceAll("^,|,$", "");
-            est.setDiasFechados(novosDias);
-            usuarioRepository.save(est);
+        Usuario user = usuarioRepository.findById(estabelecimentoId).orElse(null);
+        if (user instanceof Estabelecimento) {
+            Estabelecimento est = (Estabelecimento) user;
+            if (est.getDiasFechados() != null) {
+                String dataStr = data.toString();
+                String novosDias = est.getDiasFechados().replace(dataStr, "").replace(",,", ",").replaceAll("^,|,$",
+                        "");
+                est.setDiasFechados(novosDias);
+                usuarioRepository.save(est);
+            }
+        } else if (user != null) {
+            throw new IllegalArgumentException("O ID fornecido não pertence a um Estabelecimento.");
         }
     }
 }

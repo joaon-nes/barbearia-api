@@ -16,7 +16,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/agendamentos")
-@CrossOrigin(origins = "*")
 @RequiredArgsConstructor
 public class AgendamentoController {
 
@@ -37,6 +36,11 @@ public class AgendamentoController {
 
             var usuario = usuarioRepository.findById(agendamento.getCliente().getId())
                     .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
+
+            if (!(usuario instanceof Cliente)) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("erro", "O ID fornecido não pertence a um Cliente válido."));
+            }
 
             agendamento.setCliente((Cliente) usuario);
             agendamento.setServico(servicoCompleto);

@@ -161,7 +161,7 @@
                     const userAtualizado = await response.json();
                     localStorage.setItem('usuarioLogado', JSON.stringify(userAtualizado));
                     alert("Perfil configurado com sucesso!");
-                    window.location.href = 'dashboard-estabelecimento.html';
+                    window.location.href = 'estabelecimento.html';
                 }
             } catch (error) { alert("Erro ao salvar perfil."); }
         });

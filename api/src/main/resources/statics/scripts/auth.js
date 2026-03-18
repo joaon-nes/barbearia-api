@@ -92,13 +92,15 @@ if (form2FA) {
             });
 
             if (response.ok || response.status === 206) {
-                const usuarioData = await response.json();
+                const data = await response.json();
 
                 if (response.status === 206) {
-                    localStorage.setItem('usuarioLogado', JSON.stringify(usuarioData));
+                    localStorage.setItem('usuarioLogado', JSON.stringify(data.usuario));
+                    if (data.token) localStorage.setItem('token', data.token);
+
                     window.location.href = 'completar-perfil.html';
                 } else {
-                    finalizarLogin(usuarioData);
+                    finalizarLogin(data);
                 }
             } else {
                 const erro = await response.text();
@@ -110,19 +112,25 @@ if (form2FA) {
     });
 }
 
-function finalizarLogin(usuarioData) {
-    localStorage.setItem('usuarioLogado', JSON.stringify(usuarioData));
+function finalizarLogin(data) {
+    const usuario = data.usuario;
+    const token = data.token;
 
-    if (usuarioData.role === 'ESTABELECIMENTO' && !usuarioData.perfilCompleto) {
+    localStorage.setItem('usuarioLogado', JSON.stringify(usuario));
+    if (token) {
+        localStorage.setItem('token', token);
+    }
+
+    if (usuario.role === 'ESTABELECIMENTO' && !usuario.perfilCompleto) {
         window.location.href = 'completar-perfil.html';
         return;
     }
 
-    alert(`Bem-vindo, ${usuarioData.nome}!`);
+    alert(`Bem-vindo, ${usuario.nome}!`);
 
-    if (usuarioData.role === 'ADMIN') {
+    if (usuario.role === 'ADMIN') {
         window.location.href = 'dashboard-admin.html';
-    } else if (usuarioData.role === 'ESTABELECIMENTO') {
+    } else if (usuario.role === 'ESTABELECIMENTO') {
         window.location.href = 'estabelecimento.html';
     } else {
         window.location.href = 'cliente.html';

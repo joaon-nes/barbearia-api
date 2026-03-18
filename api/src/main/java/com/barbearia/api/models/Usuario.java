@@ -2,6 +2,7 @@ package com.barbearia.api.models;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -36,10 +37,16 @@ public abstract class Usuario {
     @Column(unique = true)
     private String email;
 
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String senha;
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String codigoVerificacao;
-    private Boolean ativo;
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String codigo2fa;
+
+    private Boolean ativo;
     private String telefone;
 
     @Enumerated(EnumType.STRING)
