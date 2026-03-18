@@ -29,6 +29,9 @@ public class Estabelecimento extends Usuario {
     @Column(columnDefinition = "TEXT")
     private String horariosFuncionamento;
 
+    private Double latitude;
+    private Double longitude;
+
     @Column(columnDefinition = "boolean default false")
     private Boolean perfilCompleto = false;
 

@@ -7,6 +7,8 @@
     <title>Painel Gestão - Barbearia</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         ::-webkit-scrollbar {
             display: none;
@@ -314,6 +316,20 @@
                                     placeholder="Bairro" readonly>
                             </div>
                         </div>
+
+                        <div class="mb-3 mt-3">
+                            <label class="small fw-bold text-primary d-flex align-items-center mb-2">
+                                Localização
+                                <i class="bi bi-info-circle-fill ms-2 fs-6 text-muted" data-bs-toggle="tooltip"
+                                    data-bs-placement="top"
+                                    title="Arraste o marcador até o endereço exato no mapa para definir seu endereço."
+                                    style="cursor: help;"></i>
+                            </label>
+                            <div id="mapaEstabelecimento"
+                                style="height: 250px; width: 100%; border-radius: 12px; z-index: 1;"></div>
+                            <input type="hidden" id="editLat">
+                            <input type="hidden" id="editLng">
+                        </div>
                     </div>
 
                     <div class="card bg-white p-3 mb-3 border-0 shadow-sm rounded-4">
@@ -457,21 +473,22 @@
         let todosMeusAgendamentos = [];
         let servicosCache = [];
         let fotosGaleriaAtual = [];
+        let mapaEst, markerEst;
 
         document.getElementById('nomeAdmin').innerText = usuarioAtual.nomeBarbearia || usuarioAtual.nome;
+        if (usuarioAtual.fotoPerfil) document.getElementById('capaBarbearia').style.backgroundImage = `url(${usuarioAtual.fotoPerfil})`;
 
-        if (usuarioAtual.fotoPerfil) {
-            document.getElementById('capaBarbearia').style.backgroundImage = `url(${usuarioAtual.fotoPerfil})`;
-        }
+        document.addEventListener("DOMContentLoaded", function () {
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        });
 
-        function logout() {
-            localStorage.clear();
-            window.location.href = 'login.html';
-        }
+        function logout() { localStorage.clear(); window.location.href = 'login.html'; }
 
         function formatarDataRelativa(dataStr) {
             if (!dataStr) return '';
-
             const dataObj = new Date(dataStr);
             const hoje = new Date();
             const diffTime = Math.abs(hoje - dataObj);
@@ -479,12 +496,10 @@
 
             if (diffDays === 0 && hoje.getDate() === dataObj.getDate()) return 'Hoje';
             if (diffDays === 1 || (diffDays === 0 && hoje.getDate() !== dataObj.getDate())) return 'Ontem';
-
             if (diffDays < 7) {
                 const diasSemana = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
                 return diasSemana[dataObj.getDay()];
             }
-
             return dataObj.toLocaleDateString('pt-PT');
         }
 
@@ -493,14 +508,39 @@
             document.getElementById(`tab-${abaId}`).classList.add('active');
             el.classList.add('active');
 
-            if (abaId === 'servicos') {
-                carregarServicos();
-                document.getElementById('editTags').value = usuarioAtual.tags || '';
-                renderizarGaleriaEdit();
+            if (abaId === 'servicos') { carregarServicos(); document.getElementById('editTags').value = usuarioAtual.tags || ''; renderizarGaleriaEdit(); }
+            if (abaId === 'perfil') {
+                preencherFormPerfil();
+                setTimeout(carregarMapaPerfil, 150);
+            }
+            if (abaId === 'avaliacoes') carregarAvaliacoes();
+        }
+
+        function carregarMapaPerfil() {
+            if (mapaEst) {
+                mapaEst.invalidateSize();
+                return;
             }
 
-            if (abaId === 'perfil') preencherFormPerfil();
-            if (abaId === 'avaliacoes') carregarAvaliacoes();
+            let lat = usuarioAtual.latitude || -30.0346;
+            let lng = usuarioAtual.longitude || -51.2177;
+
+            document.getElementById('editLat').value = lat;
+            document.getElementById('editLng').value = lng;
+
+            mapaEst = L.map('mapaEstabelecimento').setView([lat, lng], 15);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap'
+            }).addTo(mapaEst);
+
+            markerEst = L.marker([lat, lng], { draggable: true }).addTo(mapaEst);
+
+            markerEst.on('dragend', function (e) {
+                let posicao = markerEst.getLatLng();
+                document.getElementById('editLat').value = posicao.lat;
+                document.getElementById('editLng').value = posicao.lng;
+            });
         }
 
         function alterarFoto(e) {
@@ -508,15 +548,8 @@
             reader.onload = async (ev) => {
                 const base64 = ev.target.result;
                 document.getElementById('capaBarbearia').style.backgroundImage = `url(${base64})`;
-
-                await fetch(`http://localhost:8080/api/usuarios/${usuarioAtual.id}/foto`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ fotoPerfil: base64 })
-                });
-
-                usuarioAtual.fotoPerfil = base64;
-                localStorage.setItem('usuarioLogado', JSON.stringify(usuarioAtual));
+                await fetch(`http://localhost:8080/api/usuarios/${usuarioAtual.id}/foto`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fotoPerfil: base64 }) });
+                usuarioAtual.fotoPerfil = base64; localStorage.setItem('usuarioLogado', JSON.stringify(usuarioAtual));
             };
             reader.readAsDataURL(e.target.files[0]);
         }
@@ -526,7 +559,6 @@
         function inicializarDatasAgenda() {
             const container = document.getElementById('agendaDatasContainer');
             container.innerHTML = '';
-
             let hoje = new Date();
             let dataHojeIso = new Date(hoje.getTime() - (hoje.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
 
@@ -541,7 +573,6 @@
                         <div class="fs-5">${d.getDate()}</div>
                     </div>`;
             }
-
             buscarAgendamentosDaApi(dataHojeIso);
             carregarAvaliacoes();
             fotosGaleriaAtual = usuarioAtual.fotosGaleria ? JSON.parse(usuarioAtual.fotosGaleria) : [];
@@ -567,9 +598,7 @@
 
             ags.forEach(ag => {
                 if (ag.status === 'CONCLUIDO') lucro += ag.servico?.preco || 0;
-
-                let acoes = '';
-                let classeRow = '';
+                let acoes = ''; let classeRow = '';
 
                 if (ag.status === 'AGENDADO' || (ag.status === 'REAGENDAMENTO_PENDENTE' && ag.quemSugeriuReagendamento === 'ESTABELECIMENTO')) {
                     acoes = `<button onclick="mudarStatus(${ag.id}, 'CONCLUIDO', '${dataIso}')" class="btn btn-sm btn-success p-1 me-1"><i class="bi bi-check-lg"></i></button> 
@@ -622,55 +651,30 @@
         async function carregarAvaliacoes() {
             const res = await fetch('http://localhost:8080/api/agendamentos');
             const todos = await res.json();
-
             const minhasAvaliacoes = todos.filter(ag => ag.estabelecimento?.id === usuarioAtual.id && ag.notaAvaliacao != null).sort((a, b) => {
-                let dateA = a.dataAvaliacao || a.dataHoraInicio;
-                let dateB = b.dataAvaliacao || b.dataHoraInicio;
-                return dateB.localeCompare(dateA);
+                let dateA = a.dataAvaliacao || a.dataHoraInicio; let dateB = b.dataAvaliacao || b.dataHoraInicio; return dateB.localeCompare(dateA);
             });
 
             const naoRespondidas = minhasAvaliacoes.filter(ag => !ag.respostaAvaliacao).length;
             const badge = document.getElementById('badgeNotificacao');
-
-            if (naoRespondidas > 0) {
-                badge.innerText = naoRespondidas;
-                badge.style.display = 'block';
-            } else {
-                badge.style.display = 'none';
-            }
+            if (naoRespondidas > 0) { badge.innerText = naoRespondidas; badge.style.display = 'block'; } else { badge.style.display = 'none'; }
 
             const container = document.getElementById('listaAvaliacoesContainer');
-
             if (minhasAvaliacoes.length === 0) {
-                container.innerHTML = `
-                    <div class="text-center text-muted mt-5">
-                        <i class="bi bi-star fs-1"></i>
-                        <p>Ainda não recebeu nenhuma avaliação.</p>
-                    </div>`;
-                return;
+                container.innerHTML = `<div class="text-center text-muted mt-5"><i class="bi bi-star fs-1"></i><p>Ainda não recebeu nenhuma avaliação.</p></div>`; return;
             }
 
             container.innerHTML = minhasAvaliacoes.map(ag => {
                 let badgeVerified = ag.cliente?.contaVerificada ? ' <i class="bi bi-patch-check-fill text-primary" title="Verificado"></i>' : '';
                 let dAvaliacao = formatarDataRelativa(ag.dataAvaliacao || ag.dataHoraInicio);
-
                 let areaResposta = !ag.respostaAvaliacao
                     ? `<button class="btn btn-sm btn-outline-primary mt-3" onclick="abrirModalResponder(${ag.id})">Responder Feedback</button>`
-                    : `<div class="mt-3 bg-light p-3 rounded-3 border-3 border-primary">
-                           <div class="d-flex justify-content-between align-items-center mb-1">
-                               <strong class="small">${usuarioAtual.nomeBarbearia}</strong>
-                               <small class="text-muted" style="font-size:0.65rem;">${formatarDataRelativa(ag.dataResposta)}</small>
-                           </div>
-                           <p class="small text-muted m-0">${ag.respostaAvaliacao}</p>
-                       </div>`;
+                    : `<div class="mt-3 bg-light p-3 rounded-3 border-3 border-primary"><div class="d-flex justify-content-between align-items-center mb-1"><strong class="small">${usuarioAtual.nomeBarbearia}</strong><small class="text-muted" style="font-size:0.65rem;">${formatarDataRelativa(ag.dataResposta)}</small></div><p class="small text-muted m-0">${ag.respostaAvaliacao}</p></div>`;
 
                 return `
                     <div class="card card-custom p-3 mb-3 border-0 shadow-sm">
                         <div class="d-flex justify-content-between align-items-center mb-1">
-                            <div>
-                                <strong class="small">${ag.cliente?.nome.split(' ')[0]}${badgeVerified}</strong> 
-                                <small class="text-muted ms-1" style="font-size: 0.7rem;">${dAvaliacao}</small>
-                            </div>
+                            <div><strong class="small">${ag.cliente?.nome.split(' ')[0]}${badgeVerified}</strong> <small class="text-muted ms-1" style="font-size: 0.7rem;">${dAvaliacao}</small></div>
                             <span class="text-warning small">${'⭐'.repeat(ag.notaAvaliacao)}</span>
                         </div>
                         <p class="small m-0 mt-2">${ag.comentarioAvaliacao}</p>
@@ -679,190 +683,97 @@
             }).join('');
         }
 
-        function abrirModalResponder(id) {
-            document.getElementById('idAgendamentoResponder').value = id;
-            document.getElementById('textoResposta').value = '';
-            new bootstrap.Modal('#modalResponder').show();
-        }
+        function abrirModalResponder(id) { document.getElementById('idAgendamentoResponder').value = id; document.getElementById('textoResposta').value = ''; new bootstrap.Modal('#modalResponder').show(); }
 
         async function enviarResposta() {
             let id = document.getElementById('idAgendamentoResponder').value;
             let resp = document.getElementById('textoResposta').value;
-
             if (resp && resp.trim() !== '') {
-                await fetch(`http://localhost:8080/api/agendamentos/${id}/responder-avaliacao`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ resposta: resp })
-                });
+                await fetch(`http://localhost:8080/api/agendamentos/${id}/responder-avaliacao`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ resposta: resp }) });
                 location.reload();
-            } else {
-                alert("A resposta não pode estar vazia.");
-            }
+            } else { alert("A resposta não pode estar vazia."); }
         }
 
         async function mudarStatus(id, status, dataIso) {
             if (!confirm(`Confirmar ${status}?`)) return;
-
-            await fetch(`http://localhost:8080/api/agendamentos/${id}/status`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status })
-            });
-
+            await fetch(`http://localhost:8080/api/agendamentos/${id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
             buscarAgendamentosDaApi(dataIso);
         }
 
         async function carregarServicos() {
             const res = await fetch(`http://localhost:8080/api/servicos/estabelecimento/${usuarioAtual.id}`);
             servicosCache = await res.json();
-
             document.getElementById('listaServicos').innerHTML = servicosCache.map(s => `
                 <div class="card card-custom p-3 mb-2 d-flex flex-row justify-content-between align-items-center">
-                    <div>
-                        <h6 class="fw-bold m-0">${s.nome}</h6>
-                        <small>R$ ${s.preco.toFixed(2)} | ${s.duracaoMinutos}min</small>
-                    </div>
-                    <div>
-                        <button onclick="editarServico(${s.id})" class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil"></i></button> 
-                        <button onclick="eliminarServico(${s.id})" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                    </div>
+                    <div><h6 class="fw-bold m-0">${s.nome}</h6><small>R$ ${s.preco.toFixed(2)} | ${s.duracaoMinutos}min</small></div>
+                    <div><button onclick="editarServico(${s.id})" class="btn btn-sm btn-outline-primary me-1"><i class="bi bi-pencil"></i></button> <button onclick="eliminarServico(${s.id})" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></div>
                 </div>`).join('');
         }
 
         function editarServico(id) {
             const s = servicosCache.find(x => x.id === id);
             document.getElementById('idServicoEdicao').value = s.id;
-            document.getElementById('nomeServico').value = s.nome;
-            document.getElementById('precoServico').value = s.preco;
-            document.getElementById('duracaoServico').value = s.duracaoMinutos;
-
-            document.getElementById('btnSalvarServico').innerText = 'Atualizar';
-            document.getElementById('btnCancelarEdicao').style.display = 'block';
+            document.getElementById('nomeServico').value = s.nome; document.getElementById('precoServico').value = s.preco; document.getElementById('duracaoServico').value = s.duracaoMinutos;
+            document.getElementById('btnSalvarServico').innerText = 'Atualizar'; document.getElementById('btnCancelarEdicao').style.display = 'block';
         }
 
         function cancelarEdicaoServico() {
-            document.getElementById('formServico').reset();
-            document.getElementById('idServicoEdicao').value = '';
-
-            document.getElementById('btnSalvarServico').innerText = 'Salvar';
-            document.getElementById('btnCancelarEdicao').style.display = 'none';
+            document.getElementById('formServico').reset(); document.getElementById('idServicoEdicao').value = '';
+            document.getElementById('btnSalvarServico').innerText = 'Salvar'; document.getElementById('btnCancelarEdicao').style.display = 'none';
         }
 
         document.getElementById('formServico').onsubmit = async (e) => {
             e.preventDefault();
-
             const id = document.getElementById('idServicoEdicao').value;
-            const dados = {
-                nome: document.getElementById('nomeServico').value,
-                preco: document.getElementById('precoServico').value,
-                duracaoMinutos: document.getElementById('duracaoServico').value
-            };
-
-            const url = id
-                ? `http://localhost:8080/api/servicos/${id}`
-                : `http://localhost:8080/api/servicos/estabelecimento/${usuarioAtual.id}`;
-
-            await fetch(url, {
-                method: id ? 'PUT' : 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(dados)
-            });
-
-            cancelarEdicaoServico();
-            carregarServicos();
+            const dados = { nome: document.getElementById('nomeServico').value, preco: document.getElementById('precoServico').value, duracaoMinutos: document.getElementById('duracaoServico').value };
+            const url = id ? `http://localhost:8080/api/servicos/${id}` : `http://localhost:8080/api/servicos/estabelecimento/${usuarioAtual.id}`;
+            await fetch(url, { method: id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
+            cancelarEdicaoServico(); carregarServicos();
         };
 
-        async function eliminarServico(id) {
-            if (confirm("Eliminar serviço?")) {
-                await fetch(`http://localhost:8080/api/servicos/${id}`, { method: 'DELETE' });
-                carregarServicos();
-            }
-        }
+        async function eliminarServico(id) { if (confirm("Eliminar serviço?")) { await fetch(`http://localhost:8080/api/servicos/${id}`, { method: 'DELETE' }); carregarServicos(); } }
 
         function renderizarGaleriaEdit() {
             const container = document.getElementById('editGaleriaContainer');
-
-            if (fotosGaleriaAtual.length === 0) {
-                container.innerHTML = '<small class="text-muted">Nenhuma foto enviada.</small>';
-                return;
-            }
-
+            if (fotosGaleriaAtual.length === 0) { container.innerHTML = '<small class="text-muted">Nenhuma foto enviada.</small>'; return; }
             container.innerHTML = fotosGaleriaAtual.map((f, i) => `
                 <div style="position: relative; flex-shrink: 0;"> 
                     <img src="${f}" class="rounded-3 shadow-sm" style="width: 90px; height: 90px; object-fit: cover;"> 
-                    <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 p-0 shadow" style="width: 24px; height: 24px; border-radius: 50%" onclick="removerFotoGaleria(${i})">
-                        <i class="bi bi-x"></i>
-                    </button> 
+                    <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 p-0 shadow" style="width: 24px; height: 24px; border-radius: 50%" onclick="removerFotoGaleria(${i})"><i class="bi bi-x"></i></button> 
                 </div>`).join('');
         }
 
         function adicionarFotosGaleria(e) {
             const files = e.target.files;
-
             for (let i = 0; i < files.length; i++) {
                 const reader = new FileReader();
-                reader.onload = (ev) => {
-                    fotosGaleriaAtual.push(ev.target.result);
-                    renderizarGaleriaEdit();
-                    salvarGaleriaNoBackEnd();
-                };
+                reader.onload = (ev) => { fotosGaleriaAtual.push(ev.target.result); renderizarGaleriaEdit(); salvarGaleriaNoBackEnd(); };
                 reader.readAsDataURL(files[i]);
             }
         }
 
-        function removerFotoGaleria(index) {
-            fotosGaleriaAtual.splice(index, 1);
-            renderizarGaleriaEdit();
-            salvarGaleriaNoBackEnd();
-        }
+        function removerFotoGaleria(index) { fotosGaleriaAtual.splice(index, 1); renderizarGaleriaEdit(); salvarGaleriaNoBackEnd(); }
 
         async function salvarGaleriaNoBackEnd() {
-            usuarioAtual.fotosGaleria = JSON.stringify(fotosGaleriaAtual);
-            localStorage.setItem('usuarioLogado', JSON.stringify(usuarioAtual));
-
-            try {
-                await fetch(`http://localhost:8080/api/usuarios/${usuarioAtual.id}/galeria`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ fotosGaleria: usuarioAtual.fotosGaleria })
-                });
-            } catch (e) {
-                console.error("Erro ao salvar galeria", e);
-            }
+            usuarioAtual.fotosGaleria = JSON.stringify(fotosGaleriaAtual); localStorage.setItem('usuarioLogado', JSON.stringify(usuarioAtual));
+            try { await fetch(`http://localhost:8080/api/usuarios/${usuarioAtual.id}/galeria`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fotosGaleria: usuarioAtual.fotosGaleria }) }); } catch (e) { }
         }
 
         async function salvarTags() {
-            let tagsVal = document.getElementById('editTags').value;
-            usuarioAtual.tags = tagsVal;
-            localStorage.setItem('usuarioLogado', JSON.stringify(usuarioAtual));
-
-            await fetch(`http://localhost:8080/api/usuarios/${usuarioAtual.id}/tags`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tags: tagsVal })
-            });
-
+            let tagsVal = document.getElementById('editTags').value; usuarioAtual.tags = tagsVal; localStorage.setItem('usuarioLogado', JSON.stringify(usuarioAtual));
+            await fetch(`http://localhost:8080/api/usuarios/${usuarioAtual.id}/tags`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tags: tagsVal }) });
             alert("Especialidades guardadas!");
         }
 
         function preencherFormPerfil() {
             const u = usuarioAtual;
-
             document.getElementById('editNomeBarbearia').value = u.nomeBarbearia || '';
             document.getElementById('editTelefone').value = u.telefone || '';
-            document.getElementById('editInstagram').value = u.linkInstagram || '';
-            document.getElementById('editFacebook').value = u.linkFacebook || '';
-            document.getElementById('editTiktok').value = u.linkTiktok || '';
-            document.getElementById('editCep').value = u.cep || '';
-            document.getElementById('editRua').value = u.rua || '';
-            document.getElementById('editNumero').value = u.numero || '';
-            document.getElementById('editBairro').value = u.bairro || '';
+            document.getElementById('editInstagram').value = u.linkInstagram || ''; document.getElementById('editFacebook').value = u.linkFacebook || ''; document.getElementById('editTiktok').value = u.linkTiktok || '';
+            document.getElementById('editCep').value = u.cep || ''; document.getElementById('editRua').value = u.rua || ''; document.getElementById('editNumero').value = u.numero || ''; document.getElementById('editBairro').value = u.bairro || '';
 
             let comodidades = u.comodidades ? u.comodidades.split(',') : [];
-            document.querySelectorAll('.com-check').forEach(chk => {
-                chk.checked = comodidades.includes(chk.value);
-            });
+            document.querySelectorAll('.com-check').forEach(chk => { chk.checked = comodidades.includes(chk.value); });
 
             const dias = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
             let hSalvos = JSON.parse(u.horariosFuncionamento || '[]');
@@ -873,20 +784,8 @@
                     <div class="mb-3 row-h border-bottom pb-2" data-dia="${d}">
                         <div class="fw-bold text-dark small mb-1">${d}</div>
                         <div class="d-flex gap-2">
-                            <div class="input-group input-group-sm shadow-sm">
-                                <span class="input-group-text bg-light border-0" title="Manhã">
-                                    <i class="bi bi-sun text-warning"></i>
-                                </span>
-                                <input type="time" class="form-control a1 border-start-0" value="${c.abertura1}">
-                                <input type="time" class="form-control f1" value="${c.fechamento1}">
-                            </div>
-                            <div class="input-group input-group-sm shadow-sm">
-                                <span class="input-group-text bg-light border-0" title="Tarde">
-                                    <i class="bi bi-moon text-primary"></i>
-                                </span>
-                                <input type="time" class="form-control a2 border-start-0" value="${c.abertura2}">
-                                <input type="time" class="form-control f2" value="${c.fechamento2}">
-                            </div>
+                            <div class="input-group input-group-sm shadow-sm"><span class="input-group-text bg-light border-0" title="Manhã"><i class="bi bi-sun text-warning"></i></span><input type="time" class="form-control a1 border-start-0" value="${c.abertura1}"><input type="time" class="form-control f1" value="${c.fechamento1}"></div>
+                            <div class="input-group input-group-sm shadow-sm"><span class="input-group-text bg-light border-0" title="Tarde"><i class="bi bi-moon text-primary"></i></span><input type="time" class="form-control a2 border-start-0" value="${c.abertura2}"><input type="time" class="form-control f2" value="${c.fechamento2}"></div>
                         </div>
                     </div>`;
             }).join('');
@@ -895,149 +794,69 @@
         async function buscarCepEdit(val) {
             const res = await fetch(`https://viacep.com.br/ws/${val.replace(/\D/g, '')}/json/`);
             const d = await res.json();
-
-            if (!d.erro) {
-                document.getElementById('editRua').value = d.logradouro;
-                document.getElementById('editBairro').value = d.bairro;
-            }
+            if (!d.erro) { document.getElementById('editRua').value = d.logradouro; document.getElementById('editBairro').value = d.bairro; }
         }
 
         document.getElementById('formEditarPerfil').onsubmit = async (e) => {
             e.preventDefault();
-
             let horários = [];
-            document.querySelectorAll('.row-h').forEach(r => {
-                horários.push({
-                    dia: r.dataset.dia,
-                    abertura1: r.querySelector('.a1').value,
-                    fechamento1: r.querySelector('.f1').value,
-                    abertura2: r.querySelector('.a2').value,
-                    fechamento2: r.querySelector('.f2').value
-                });
-            });
+            document.querySelectorAll('.row-h').forEach(r => { horários.push({ dia: r.dataset.dia, abertura1: r.querySelector('.a1').value, fechamento1: r.querySelector('.f1').value, abertura2: r.querySelector('.a2').value, fechamento2: r.querySelector('.f2').value }); });
 
-            let comodidadesArray = [];
-            document.querySelectorAll('.com-check:checked').forEach(chk => {
-                comodidadesArray.push(chk.value);
-            });
+            let comodidadesArray = []; document.querySelectorAll('.com-check:checked').forEach(chk => { comodidadesArray.push(chk.value); });
 
             const dados = {
-                nomeBarbearia: document.getElementById('editNomeBarbearia').value,
-                telefone: document.getElementById('editTelefone').value,
-                linkInstagram: document.getElementById('editInstagram').value,
-                linkFacebook: document.getElementById('editFacebook').value,
-                linkTiktok: document.getElementById('editTiktok').value,
-                cep: document.getElementById('editCep').value,
-                rua: document.getElementById('editRua').value,
-                numero: document.getElementById('editNumero').value,
-                bairro: document.getElementById('editBairro').value,
-                cidade: usuarioAtual.cidade,
-                estado: usuarioAtual.estado,
-                horariosFuncionamento: JSON.stringify(horários),
-                comodidades: comodidadesArray.join(',')
+                nomeBarbearia: document.getElementById('editNomeBarbearia').value, telefone: document.getElementById('editTelefone').value,
+                linkInstagram: document.getElementById('editInstagram').value, linkFacebook: document.getElementById('editFacebook').value, linkTiktok: document.getElementById('editTiktok').value,
+                cep: document.getElementById('editCep').value, rua: document.getElementById('editRua').value, numero: document.getElementById('editNumero').value, bairro: document.getElementById('editBairro').value,
+                cidade: usuarioAtual.cidade, estado: usuarioAtual.estado, horariosFuncionamento: JSON.stringify(horários), comodidades: comodidadesArray.join(','),
+
+                latitude: parseFloat(document.getElementById('editLat').value),
+                longitude: parseFloat(document.getElementById('editLng').value)
             };
 
-            const res = await fetch(`http://localhost:8080/api/usuarios/${usuarioAtual.id}/completar-perfil`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(dados)
-            });
-
-            const at = await res.json();
-            localStorage.setItem('usuarioLogado', JSON.stringify(at));
-            alert("Perfil Atualizado!");
-            window.location.reload();
+            const res = await fetch(`http://localhost:8080/api/usuarios/${usuarioAtual.id}/completar-perfil`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
+            const at = await res.json(); localStorage.setItem('usuarioLogado', JSON.stringify(at)); alert("Perfil Atualizado!"); window.location.reload();
         };
 
         function abrirModalReagendarEst(id, dataHoraAtual) {
             document.getElementById('idAgReagendarEst').value = id;
-            let [data, hora] = dataHoraAtual.split('T');
-            document.getElementById('dataReagendarEst').value = data;
-            document.getElementById('horaReagendarEst').value = hora.substring(0, 5);
+            let [data, hora] = dataHoraAtual.split('T'); document.getElementById('dataReagendarEst').value = data; document.getElementById('horaReagendarEst').value = hora.substring(0, 5);
             new bootstrap.Modal('#modalReagendarEst').show();
         }
 
         async function salvarReagendamentoEst() {
-            const id = document.getElementById('idAgReagendarEst').value;
-            const data = document.getElementById('dataReagendarEst').value;
-            let hora = document.getElementById('horaReagendarEst').value;
-
-            if (!data || !hora) {
-                alert("Por favor, selecione uma data e um horário válidos.");
-                return;
-            }
-
+            const id = document.getElementById('idAgReagendarEst').value; const data = document.getElementById('dataReagendarEst').value; let hora = document.getElementById('horaReagendarEst').value;
+            if (!data || !hora) { alert("Selecione data e horário."); return; }
             hora = hora.substring(0, 5);
-
             try {
-                const response = await fetch(`http://localhost:8080/api/agendamentos/${id}/propor-reagendamento`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ dataHoraProposta: `${data}T${hora}:00`, quemSugeriu: 'ESTABELECIMENTO' })
-                });
-
-                if (!response.ok) {
-                    const error = await response.json();
-                    alert("Aviso: " + (error.erro || "Horário indisponível"));
-                    return;
-                }
-
-                alert("Proposta de remarcação enviada ao cliente com sucesso!");
-                location.reload();
-            } catch (e) {
-                alert("Erro de rede ao comunicar com a API. Verifique se o servidor está a correr.");
-            }
+                const response = await fetch(`http://localhost:8080/api/agendamentos/${id}/propor-reagendamento`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dataHoraProposta: `${data}T${hora}:00`, quemSugeriu: 'ESTABELECIMENTO' }) });
+                if (!response.ok) { const error = await response.json(); alert("Aviso: " + (error.erro || "Horário indisponível")); return; }
+                alert("Proposta enviada!"); location.reload();
+            } catch (e) { alert("Erro de rede."); }
         }
 
         async function cancelarDiaInteiro(dataIso) {
-            if (!confirm("Tem certeza que deseja fechar o estabelecimento neste dia?\n\n- Todos os agendamentos serão CANCELADOS.\n- Os clientes serão notificados por e-mail.\n- Novos agendamentos serão bloqueados.")) return;
-
+            if (!confirm("Tem certeza que deseja fechar o estabelecimento neste dia?\n\n- Agendamentos cancelados.\n- E-mails disparados.")) return;
             try {
-                const response = await fetch(`http://localhost:8080/api/agendamentos/estabelecimento/${usuarioAtual.id}/fechar-dia`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: dataIso })
-                });
-
-                if (!response.ok) { alert("Erro ao fechar o dia."); return; }
-
-                let diasAtuais = usuarioAtual.diasFechados || "";
-                usuarioAtual.diasFechados = diasAtuais ? diasAtuais + "," + dataIso : dataIso;
-                localStorage.setItem('usuarioLogado', JSON.stringify(usuarioAtual));
-
-                const resData = await response.json();
-                alert(resData.mensagem);
-                buscarAgendamentosDaApi(dataIso);
-            } catch (e) { alert("Erro de rede."); }
+                const response = await fetch(`http://localhost:8080/api/agendamentos/estabelecimento/${usuarioAtual.id}/fechar-dia`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: dataIso }) });
+                if (!response.ok) { alert("Erro ao fechar."); return; }
+                let diasAtuais = usuarioAtual.diasFechados || ""; usuarioAtual.diasFechados = diasAtuais ? diasAtuais + "," + dataIso : dataIso; localStorage.setItem('usuarioLogado', JSON.stringify(usuarioAtual));
+                const resData = await response.json(); alert(resData.mensagem); buscarAgendamentosDaApi(dataIso);
+            } catch (e) { alert("Erro."); }
         }
 
         async function reabrirDia(dataIso) {
-            if (!confirm("Deseja reabrir este dia e permitir novos agendamentos?")) return;
+            if (!confirm("Deseja reabrir este dia?")) return;
             try {
-                const response = await fetch(`http://localhost:8080/api/agendamentos/estabelecimento/${usuarioAtual.id}/reabrir-dia`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: dataIso })
-                });
-
+                const response = await fetch(`http://localhost:8080/api/agendamentos/estabelecimento/${usuarioAtual.id}/reabrir-dia`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: dataIso }) });
                 if (!response.ok) { alert("Erro ao reabrir."); return; }
-
-                if (usuarioAtual.diasFechados) {
-                    usuarioAtual.diasFechados = usuarioAtual.diasFechados.replace(dataIso, "").replace(",,", ",").replace(/^,|,$/g, "");
-                    localStorage.setItem('usuarioLogado', JSON.stringify(usuarioAtual));
-                }
-
-                alert("Dia reaberto com sucesso!");
-                buscarAgendamentosDaApi(dataIso);
-            } catch (e) { alert("Erro de rede."); }
+                if (usuarioAtual.diasFechados) { usuarioAtual.diasFechados = usuarioAtual.diasFechados.replace(dataIso, "").replace(",,", ",").replace(/^,|,$/g, ""); localStorage.setItem('usuarioLogado', JSON.stringify(usuarioAtual)); }
+                alert("Reaberto!"); buscarAgendamentosDaApi(dataIso);
+            } catch (e) { alert("Erro."); }
         }
 
-        async function aceitarPropostaEst(id) {
-            await fetch(`http://localhost:8080/api/agendamentos/${id}/confirmar-reagendamento`, { method: 'PUT' });
-            alert("Horário aceito!"); location.reload();
-        }
-
-        async function excluirAgendamentoDefinitivo(id) {
-            if (!confirm("Tem certeza que deseja apagar este registro do banco de dados?")) return;
-            await fetch(`http://localhost:8080/api/agendamentos/${id}`, { method: 'DELETE' });
-            location.reload();
-        }
+        async function aceitarPropostaEst(id) { await fetch(`http://localhost:8080/api/agendamentos/${id}/confirmar-reagendamento`, { method: 'PUT' }); alert("Aceito!"); location.reload(); }
+        async function excluirAgendamentoDefinitivo(id) { if (!confirm("Apagar registro?")) return; await fetch(`http://localhost:8080/api/agendamentos/${id}`, { method: 'DELETE' }); location.reload(); }
 
         inicializarDatasAgenda();
     </script>

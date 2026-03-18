@@ -7,6 +7,8 @@
     <title>Barber App - Cliente</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         ::-webkit-scrollbar {
             display: none;
@@ -21,6 +23,7 @@
             background-color: #F8F6F0;
             color: #333333;
             padding-bottom: 80px;
+            overflow-x: hidden;
         }
 
         .app-container {
@@ -28,7 +31,6 @@
             margin: 0 auto;
             min-height: 100vh;
             position: relative;
-            overflow-x: hidden;
         }
 
         .navbar-custom {
@@ -227,7 +229,6 @@
 
         .social-icon {
             font-size: 1.2rem;
-            color: #2C4E80;
             text-decoration: none;
             transition: 0.2s;
             display: inline-flex;
@@ -235,12 +236,36 @@
             justify-content: center;
             width: 35px;
             height: 35px;
-            background: #e2e8f0;
             border-radius: 50%;
         }
 
-        .social-icon:hover {
-            background: #2C4E80;
+        .social-insta {
+            color: #E1306C;
+            background: #ffe4ec;
+        }
+
+        .social-insta:hover {
+            background: #E1306C;
+            color: white;
+        }
+
+        .social-fb {
+            color: #1877F2;
+            background: #e7f0fd;
+        }
+
+        .social-fb:hover {
+            background: #1877F2;
+            color: white;
+        }
+
+        .social-tk {
+            color: #111111;
+            background: #e6e6e6;
+        }
+
+        .social-tk:hover {
+            background: #111111;
             color: white;
         }
 
@@ -255,6 +280,46 @@
 
             to {
                 opacity: 1;
+            }
+        }
+
+        /* boltar ao topo */
+        #btnVoltarTopo {
+            position: fixed;
+            bottom: -60px;
+            right: 20px;
+            z-index: 1050;
+            border: none;
+            outline: none;
+            background-color: #2C4E80;
+            color: white;
+            cursor: pointer;
+            padding: 0;
+            border-radius: 50%;
+            
+            font-size: 1.2rem;
+            width: 38px;
+            height: 38px;
+            
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: bottom 0.3s ease-in-out, transform 0.2s;
+        }
+
+        #btnVoltarTopo.mostrar {
+            bottom: 72px;
+        }
+
+        #btnVoltarTopo:active {
+            transform: scale(0.9);
+            background-color: #1a3052;
+        }
+
+        @media (min-width: 480px) {
+            #btnVoltarTopo {
+                right: calc(50% - 220px);
             }
         }
     </style>
@@ -284,9 +349,7 @@
                         <div class="position-relative d-inline-block mx-auto mb-2">
                             <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
                                 style="width: 80px; height: 80px; font-size: 2rem; background-size: cover; background-position: center;"
-                                id="letraAvatar">
-                                U
-                            </div>
+                                id="letraAvatar">U</div>
                             <button class="btn btn-sm btn-light position-absolute bottom-0 end-0 rounded-circle shadow"
                                 onclick="document.getElementById('inputFotoCliente').click()"><i
                                     class="bi bi-camera"></i></button>
@@ -341,18 +404,19 @@
                 </button>
             </div>
             <div class="container p-4" style="margin-top: -40px;">
+
                 <div class="card card-custom p-4 shadow-sm mb-4">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <h4 class="fw-bold text-primary-custom mb-0" id="nomeBar">Barbearia</h4>
                         <div id="badgeEstrelasTopo" style="display: none;"></div>
                     </div>
-                    <div id="tagsBar" class="mb-2"></div>
-                    <p class="small text-muted mb-2" id="endBar"></p>
+                    <div id="tagsBar" class="mb-3"></div>
 
-                    <div class="d-flex align-items-center justify-content-between">
-                        <p class="small text-primary-custom m-0 fw-bold">
-                            <i class="bi bi-whatsapp me-1"></i> <span id="telBar"></span>
-                        </p>
+                    <div class="d-flex align-items-center justify-content-between pt-3 border-top">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-whatsapp fs-5 text-success me-2"></i>
+                            <span id="telBar" class="text-muted" style="font-size: 0.95rem;"></span>
+                        </div>
                         <div id="sociaisBar" class="d-flex gap-2"></div>
                     </div>
                 </div>
@@ -371,11 +435,22 @@
                     <div class="d-flex flex-wrap gap-2 mb-4" id="listaComodidades"></div>
                 </div>
 
+                <div class="card card-custom p-3 shadow-sm mb-4">
+                    <h6 class="fw-bold"><i class="bi bi-geo-alt text-primary"></i> Localização</h6>
+                    <p class="small text-muted mb-2" id="textoEnderecoBarbearia"></p>
+                    <div id="mapaInline" onclick="abrirModalMapa()"
+                        style="height: 150px; width: 100%; border-radius: 12px; z-index: 1; cursor: pointer; border: 1px solid #ddd;"
+                        title="Clique para ampliar"></div>
+                </div>
+
                 <h6 class="fw-bold mb-3">Galeria</h6>
                 <div class="d-flex overflow-x-auto gap-2 pb-2 mb-4" id="galeriaBar"></div>
 
                 <h6 class="fw-bold mb-3" id="tituloAvaliacoesBar">Avaliações</h6>
                 <div class="mb-5 pb-5" id="avaliacoesBar"></div>
+                <button id="btnVoltarTopo" onclick="voltarAoTopo()" title="Voltar ao topo">
+                    <i class="bi bi-arrow-up-short"></i>
+                </button>
             </div>
         </div>
     </div>
@@ -460,12 +535,36 @@
         </div>
     </div>
 
+    <div class="modal fade" id="modalMapaCliente" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="fw-bold mb-0">Localização</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-3">
+                    <div
+                        style="position: relative; width: 100%; height: 350px; border-radius: 12px; overflow: hidden; z-index: 1; border: 1px solid #ddd;">
+                        <div id="mapaCliente" style="height: 100%; width: 100%;"></div>
+                        <a id="btnAbrirGPS" href="#" target="_blank"
+                            class="btn btn-success rounded-pill fw-bold shadow-lg"
+                            style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; font-size: 1.05rem;">
+                            <i class="bi bi-geo-alt-fill me-1"></i> Abrir no Maps
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const user = JSON.parse(localStorage.getItem('usuarioLogado'));
         let estCache = {}, servCache = {}, agsOcupados = [];
         let estSel, srvSelId, dataSel, horaSel, todosAgsGlobal = [];
         let idReagendamento = null;
+        let mapaCli, markerCli;
+        let mapaInline, markerInline;
 
         function formatarDataRelativa(dataStr) {
             if (!dataStr) return '';
@@ -493,12 +592,8 @@
         }
 
         const iconesComodidades = {
-            "WiFi": "bi-wifi",
-            "Ar-condicionado": "bi-snow",
-            "Café": "bi-cup-hot",
-            "Bebidas": "bi-cup-straw",
-            "TV": "bi-tv",
-            "Estacionamento": "bi-p-circle"
+            "WiFi": "bi-wifi", "Ar-condicionado": "bi-snow", "Café": "bi-cup-hot",
+            "Bebidas": "bi-cup-straw", "TV": "bi-tv", "Estacionamento": "bi-p-circle"
         };
 
         function renderizarPerfil() {
@@ -543,11 +638,8 @@
             alert("Perfil atualizado com sucesso!"); renderizarPerfil();
         }
 
-        if (user) {
-            renderizarPerfil();
-        } else {
-            document.getElementById('headerAuth').innerHTML = `<a href="login.html" class="btn btn-sm btn-light rounded-pill px-3">Entrar</a>`;
-        }
+        if (user) renderizarPerfil();
+        else document.getElementById('headerAuth').innerHTML = `<a href="login.html" class="btn btn-sm btn-light rounded-pill px-3">Entrar</a>`;
 
         function logout() {
             localStorage.clear();
@@ -555,10 +647,7 @@
         }
 
         function mudarAba(id, el) {
-            if (!user && id !== 'descubra') {
-                window.location.href = 'login.html';
-                return;
-            }
+            if (!user && id !== 'descubra') { window.location.href = 'login.html'; return; }
             document.querySelectorAll('.tab-content, .nav-item').forEach(x => x.classList.remove('active'));
             document.getElementById(`tab-${id}`).classList.add('active');
             el.classList.add('active');
@@ -610,6 +699,31 @@
             }
         }
 
+        function abrirModalMapa() {
+            let lat = estSel.latitude || -30.0346;
+            let lng = estSel.longitude || -51.2177;
+
+            document.getElementById('btnAbrirGPS').href = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+
+            new bootstrap.Modal('#modalMapaCliente').show();
+
+            setTimeout(() => {
+                if (!mapaCli) {
+                    mapaCli = L.map('mapaCliente', {
+                        zoomControl: false,
+                        attributionControl: false
+                    }).setView([lat, lng], 16);
+
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapaCli);
+                    markerCli = L.marker([lat, lng]).addTo(mapaCli);
+                } else {
+                    mapaCli.setView([lat, lng], 16);
+                    markerCli.setLatLng([lat, lng]);
+                }
+                mapaCli.invalidateSize();
+            }, 300);
+        }
+
         async function abrirBarbearia(id) {
             estSel = estCache[id];
             document.getElementById('main-view').style.display = 'none';
@@ -617,14 +731,14 @@
 
             document.getElementById('capaBar').style.backgroundImage = estSel.fotoPerfil ? `url(${estSel.fotoPerfil})` : 'none';
             document.getElementById('nomeBar').innerText = estSel.nomeBarbearia;
-            document.getElementById('endBar').innerText = `${estSel.rua}, ${estSel.numero} - ${estSel.bairro}`;
+
             document.getElementById('telBar').innerText = formatarTelefone(estSel.telefone) || 'Sem contacto';
             document.getElementById('tagsBar').innerHTML = estSel.tags ? estSel.tags.split(',').map(t => `<span class="tag-badge">${t.trim()}</span>`).join('') : '';
 
             let sociaisHtml = '';
-            if (estSel.linkInstagram) sociaisHtml += `<a href="${estSel.linkInstagram}" target="_blank" class="social-icon"><i class="bi bi-instagram"></i></a>`;
-            if (estSel.linkFacebook) sociaisHtml += `<a href="${estSel.linkFacebook}" target="_blank" class="social-icon"><i class="bi bi-facebook"></i></a>`;
-            if (estSel.linkTiktok) sociaisHtml += `<a href="${estSel.linkTiktok}" target="_blank" class="social-icon"><i class="bi bi-tiktok"></i></a>`;
+            if (estSel.linkInstagram) sociaisHtml += `<a href="${estSel.linkInstagram}" target="_blank" class="social-icon social-insta"><i class="bi bi-instagram"></i></a>`;
+            if (estSel.linkFacebook) sociaisHtml += `<a href="${estSel.linkFacebook}" target="_blank" class="social-icon social-fb"><i class="bi bi-facebook"></i></a>`;
+            if (estSel.linkTiktok) sociaisHtml += `<a href="${estSel.linkTiktok}" target="_blank" class="social-icon social-tk"><i class="bi bi-tiktok"></i></a>`;
             document.getElementById('sociaisBar').innerHTML = sociaisHtml;
 
             if (estSel.comodidades) {
@@ -636,6 +750,28 @@
             } else {
                 document.getElementById('sectionComodidades').style.display = 'none';
             }
+
+            document.getElementById('textoEnderecoBarbearia').innerText = `${estSel.rua}, ${estSel.numero} - ${estSel.bairro}, ${estSel.cidade}`;
+
+            let lat = estSel.latitude || -30.0346;
+            let lng = estSel.longitude || -51.2177;
+
+            if (!mapaInline) {
+                mapaInline = L.map('mapaInline', {
+                    zoomControl: false,
+                    dragging: false,
+                    scrollWheelZoom: false,
+                    doubleClickZoom: false,
+                    attributionControl: false
+                }).setView([lat, lng], 15);
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapaInline);
+                markerInline = L.marker([lat, lng]).addTo(mapaInline);
+            } else {
+                mapaInline.setView([lat, lng], 15);
+                markerInline.setLatLng([lat, lng]);
+            }
+            setTimeout(() => { mapaInline.invalidateSize(); }, 300);
 
             document.getElementById('listaServicos').innerHTML = servCache[id].map((s, idx) => `
                 <div class="d-flex justify-content-between align-items-center py-2 ${idx !== servCache[id].length - 1 ? 'border-bottom' : ''}">
@@ -736,12 +872,8 @@
         }
 
         function abrirModalAgendamento(isEdicao = false) {
-            if (!user) {
-                window.location.href = 'login.html';
-                return;
-            }
+            if (!user) { window.location.href = 'login.html'; return; }
             if (!isEdicao) idReagendamento = null;
-
             dataSel = null; horaSel = null;
             if (!isEdicao) srvSelId = null;
 
@@ -782,10 +914,7 @@
         }
 
         async function iniciarReagendamento(agId, estId, servId) {
-            idReagendamento = agId;
-            estSel = estCache[estId];
-            srvSelId = servId;
-
+            idReagendamento = agId; estSel = estCache[estId]; srvSelId = servId;
             if (!servCache[estId]) {
                 const resS = await fetch(`http://localhost:8080/api/servicos/estabelecimento/${estId}`);
                 servCache[estId] = await resS.json();
@@ -797,9 +926,7 @@
             srvSelId = document.getElementById('selectServico').value;
             if (srvSelId) {
                 document.getElementById('areaDataHora').style.display = 'block';
-                if (dataSel) {
-                    document.getElementById(`d-${dataSel}`).click();
-                }
+                if (dataSel) document.getElementById(`d-${dataSel}`).click();
             } else {
                 document.getElementById('areaDataHora').style.display = 'none';
                 document.getElementById('btnConfirmar').disabled = true;
@@ -852,15 +979,13 @@
             });
 
             const isBl = (t) => {
-                if (iso === hojeIso && t <= hrAtual) return true; // Passado
+                if (iso === hojeIso && t <= hrAtual) return true;
                 let [th, tm] = t.split(':').map(Number);
                 let start = (th * 60) + tm;
                 let end = start + srvDuracao;
 
                 for (let inter of intervalosOcupados) {
-                    if (start < inter.end && end > inter.start) {
-                        return true;
-                    }
+                    if (start < inter.end && end > inter.start) return true;
                 }
                 return false;
             };
@@ -874,12 +999,9 @@
                 while (h < fh || (h === fh && m < fm)) {
                     let t = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
                     let bl = isBl(t);
-
                     tg.innerHTML += `<div class="time-badge ${bl ? 'disabled' : ''}" onclick="${bl ? '' : 'selHora(\'' + t + '\', this)'}">${t}</div>`;
                     hs = true;
-
-                    m += 30;
-                    if (m >= 60) { m = 0; h++; }
+                    m += 30; if (m >= 60) { m = 0; h++; }
                 }
                 if (!hs) tg.innerHTML = '<small class="text-muted">Indisponível</small>';
             }
@@ -912,9 +1034,7 @@
                     bodyData = { dataHoraProposta: `${dataSel}T${horaSel}:00`, quemSugeriu: "CLIENTE" };
                 }
 
-                const response = await fetch(url, {
-                    method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bodyData)
-                });
+                const response = await fetch(url, { method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bodyData) });
 
                 if (!response.ok) {
                     const errorData = await response.json();
@@ -946,7 +1066,7 @@
 
                 let btnAcao = '';
                 if (m.status === 'AGENDADO' || (m.status === 'REAGENDAMENTO_PENDENTE' && m.quemSugeriuReagendamento === 'CLIENTE')) {
-                    let txtAguardando = m.status === 'REAGENDAMENTO_PENDENTE' ? '<div class="text-center small text-warning mt-2 fw-bold">Aguardando confirmação da barbearia...</div>' : '';
+                    let txtAguardando = m.status === 'REAGENDAMENTO_PENDENTE' ? '<div class="text-center small text-warning mt-2 fw-bold">Aguardando confirmação...</div>' : '';
                     btnAcao = `
                         ${txtAguardando}
                         <div class="d-flex gap-2 mt-3">
@@ -985,11 +1105,7 @@
 
         async function cancAg(id) {
             if (!confirm("Cancelar horário?")) return;
-            await fetch(`http://localhost:8080/api/agendamentos/${id}/status`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: 'CANCELADO' })
-            });
+            await fetch(`http://localhost:8080/api/agendamentos/${id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'CANCELADO' }) });
             carregarMeusAgs();
         }
 
@@ -997,42 +1113,56 @@
             document.getElementById('idAgendamentoAvaliar').value = id;
             document.getElementById('nomeBarAvaliar').innerText = nome;
             document.getElementById('comentarioAvaliacao').value = '';
-            setNota(0);
-            new bootstrap.Modal('#modalAvaliar').show();
+            setNota(0); new bootstrap.Modal('#modalAvaliar').show();
         }
 
         function setNota(n) {
             document.getElementById('notaSelecionada').value = n;
             let s = document.getElementById('estrelasContainer').children;
-            for (let i = 0; i < 5; i++) {
-                if (i < n) s[i].classList.add('active');
-                else s[i].classList.remove('active');
-            }
+            for (let i = 0; i < 5; i++) { if (i < n) s[i].classList.add('active'); else s[i].classList.remove('active'); }
         }
 
         async function enviarAvaliacao() {
             let i = document.getElementById('idAgendamentoAvaliar').value;
             let n = document.getElementById('notaSelecionada').value;
             let c = document.getElementById('comentarioAvaliacao').value;
-
-            if (n == 0) {
-                alert("Selecione as estrelas!");
-                return;
-            }
-
-            await fetch(`http://localhost:8080/api/agendamentos/${i}/avaliar`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nota: parseInt(n), comentario: c })
-            });
-
-            alert("Enviado!");
-            location.reload();
+            if (n == 0) { alert("Selecione as estrelas!"); return; }
+            await fetch(`http://localhost:8080/api/agendamentos/${i}/avaliar`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nota: parseInt(n), comentario: c }) });
+            alert("Enviado!"); location.reload();
         }
 
         async function aceitarProposta(id) {
             await fetch(`http://localhost:8080/api/agendamentos/${id}/confirmar-reagendamento`, { method: 'PUT' });
             alert("Horário confirmado!"); location.reload();
+        }
+
+        function verificarScroll() {
+            const btnTopo = document.getElementById("btnVoltarTopo");
+            if (!btnTopo) return;
+
+            const appContainer = document.querySelector('.app-container');
+
+            let scrollPos = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || (appContainer ? appContainer.scrollTop : 0);
+
+            if (scrollPos > 300) {
+                btnTopo.classList.add("mostrar");
+            } else {
+                btnTopo.classList.remove("mostrar");
+            }
+        }
+
+        window.addEventListener('scroll', verificarScroll, { passive: true });
+        document.addEventListener('scroll', verificarScroll, { passive: true });
+        document.body.addEventListener('scroll', verificarScroll, { passive: true });
+
+        const caixaApp = document.querySelector('.app-container');
+        if (caixaApp) caixaApp.addEventListener('scroll', verificarScroll, { passive: true });
+
+        function voltarAoTopo() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            document.documentElement.scrollTo({ top: 0, behavior: 'smooth' });
+            document.body.scrollTo({ top: 0, behavior: 'smooth' });
+            if (caixaApp) caixaApp.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         carregarBarbearias();

@@ -117,7 +117,7 @@ public class UsuarioController {
         if (usuario.getCodigo2fa() != null && usuario.getCodigo2fa().equals(codigo)) {
             usuario.setCodigo2fa(null);
             usuario.setAtivo(true);
-            
+
             repository.save(usuario);
 
             if (usuario instanceof Estabelecimento
@@ -167,6 +167,13 @@ public class UsuarioController {
                     est.setLinkFacebook((String) dadosCompletos.get("linkFacebook"));
                 if (dadosCompletos.containsKey("linkTiktok"))
                     est.setLinkTiktok((String) dadosCompletos.get("linkTiktok"));
+
+                if (dadosCompletos.containsKey("latitude") && dadosCompletos.get("latitude") != null) {
+                    est.setLatitude(Double.parseDouble(dadosCompletos.get("latitude").toString()));
+                }
+                if (dadosCompletos.containsKey("longitude") && dadosCompletos.get("longitude") != null) {
+                    est.setLongitude(Double.parseDouble(dadosCompletos.get("longitude").toString()));
+                }
 
                 est.setPerfilCompleto(true);
                 return ResponseEntity.ok(repository.save(est));
