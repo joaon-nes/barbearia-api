@@ -28,6 +28,15 @@ public class AgendamentoController {
         return ResponseEntity.ok(service.listarTodos());
     }
 
+    @GetMapping("/horarios-disponiveis")
+    public ResponseEntity<List<String>> horariosDisponiveis(
+            @RequestParam Long estabelecimentoId,
+            @RequestParam Long servicoId,
+            @RequestParam String data) {
+        return ResponseEntity
+                .ok(service.buscarHorariosDisponiveis(estabelecimentoId, servicoId, java.time.LocalDate.parse(data)));
+    }
+
     @PostMapping
     public ResponseEntity<?> criar(@Valid @RequestBody Agendamento agendamento) {
         try {
@@ -49,6 +58,8 @@ public class AgendamentoController {
 
             return ResponseEntity.ok(novo);
 
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(500).body(Map.of("erro", "Erro interno: " + e.getMessage()));
@@ -108,7 +119,6 @@ public class AgendamentoController {
     public ResponseEntity<?> proporReagendamento(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         try {
             String dataHoraStr = body.get("dataHoraProposta").toString();
-
             if (dataHoraStr.length() > 19) {
                 dataHoraStr = dataHoraStr.substring(0, 19);
             } else if (dataHoraStr.length() == 16) {
@@ -125,7 +135,6 @@ public class AgendamentoController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         } catch (Exception e) {
-            e.printStackTrace();
             return ResponseEntity.status(500).body(Map.of("erro", "Erro no servidor: " + e.getMessage()));
         }
     }
@@ -137,7 +146,6 @@ public class AgendamentoController {
                     .map(ResponseEntity::ok)
                     .orElse(ResponseEntity.notFound().build());
         } catch (Exception e) {
-            e.printStackTrace();
             return ResponseEntity.status(500).body(Map.of("erro", "Erro no servidor: " + e.getMessage()));
         }
     }
@@ -153,7 +161,6 @@ public class AgendamentoController {
                     "Dia fechado! " + cancelados + " agendamentos foram cancelados e notificados.",
                     "cancelados", cancelados));
         } catch (Exception e) {
-            e.printStackTrace();
             return ResponseEntity.status(500).body(Map.of("erro", "Erro ao fechar o dia: " + e.getMessage()));
         }
     }

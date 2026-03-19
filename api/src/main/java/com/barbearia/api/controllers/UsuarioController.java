@@ -9,6 +9,8 @@ import com.barbearia.api.security.JwtService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -40,10 +42,17 @@ public class UsuarioController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    // NOVO ENDPOINT DE GEOLOCALIZAÇÃO
+    @GetMapping("/estabelecimentos/proximos")
+    public ResponseEntity<List<Estabelecimento>> buscarProximos(
+            @RequestParam double lat, @RequestParam double lng,
+            @RequestParam(defaultValue = "15.0") double raioKm) {
+        return ResponseEntity.ok(repository.buscarEstabelecimentosProximos(lat, lng, raioKm));
+    }
+
     @PostMapping
     public ResponseEntity<Usuario> criar(@Valid @RequestBody Usuario usuario) {
         usuario.setAtivo(false);
-
         usuario.setSenha(passwordEncoder.encode(usuario.getSenha()));
 
         String codigo = String.format("%06d", secureRandom.nextInt(999999));
@@ -141,6 +150,13 @@ public class UsuarioController {
 
     @PutMapping("/{id}/completar-perfil")
     public ResponseEntity<?> completarPerfil(@PathVariable Long id, @RequestBody Map<String, Object> dadosCompletos) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Usuario usuarioLogado = (Usuario) auth.getPrincipal();
+
+        if (!usuarioLogado.getId().equals(id)) {
+            return ResponseEntity.status(403).body("Acesso negado: Você não pode alterar dados de outro utilizador.");
+        }
+
         return repository.findById(id).map(u -> {
             if (u instanceof Estabelecimento) {
                 Estabelecimento est = (Estabelecimento) u;

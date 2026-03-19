@@ -12,16 +12,16 @@ import java.util.List;
 
 @Repository
 public interface AgendamentoRepository extends JpaRepository<Agendamento, Long> {
-    
-    @Query("SELECT a FROM Agendamento a WHERE a.estabelecimento.id = :estabelecimentoId " +
-           "AND a.status <> :statusCancelado " +
-           "AND a.dataHoraInicio >= :inicioDia AND a.dataHoraInicio <= :fimDia")
-    List<Agendamento> buscarAtivosPorEstabelecimentoEDia(
-            @Param("estabelecimentoId") Long estabelecimentoId, 
-            @Param("inicioDia") LocalDateTime inicioDia, 
-            @Param("fimDia") LocalDateTime fimDia,
-            @Param("statusCancelado") StatusAgendamento statusCancelado);
 
     List<Agendamento> findByClienteId(Long clienteId);
+
     List<Agendamento> findByEstabelecimentoId(Long estabelecimentoId);
+
+    @Query("SELECT a FROM Agendamento a WHERE a.estabelecimento.id = :estabelecimentoId AND a.dataHoraInicio >= :inicio AND a.dataHoraInicio <= :fim AND a.status != :statusExcluido")
+    List<Agendamento> buscarAtivosPorEstabelecimentoEDia(@Param("estabelecimentoId") Long estabelecimentoId,
+            @Param("inicio") LocalDateTime inicio, @Param("fim") LocalDateTime fim,
+            @Param("statusExcluido") StatusAgendamento statusExcluido);
+
+    List<Agendamento> findByDataHoraInicioBetweenAndStatus(LocalDateTime inicio, LocalDateTime fim,
+            StatusAgendamento status);
 }

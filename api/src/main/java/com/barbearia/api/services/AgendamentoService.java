@@ -10,11 +10,20 @@ import com.barbearia.api.repositories.AgendamentoRepository;
 import com.barbearia.api.repositories.ServicoRepository;
 import com.barbearia.api.repositories.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -25,6 +34,29 @@ public class AgendamentoService {
     private final UsuarioRepository usuarioRepository;
     private final ServicoRepository servicoRepository;
     private final EmailService emailService;
+
+    @Scheduled(cron = "0 0 8 * * *")
+    public void enviarLembretes() {
+        LocalDateTime inicioAmanha = LocalDate.now().plusDays(1).atStartOfDay();
+        LocalDateTime fimAmanha = LocalDate.now().plusDays(1).atTime(23, 59, 59);
+
+        List<Agendamento> agendaAmanha = repository.findByDataHoraInicioBetweenAndStatus(
+                inicioAmanha, fimAmanha, StatusAgendamento.AGENDADO);
+
+        for (Agendamento ag : agendaAmanha) {
+            try {
+                String mensagem = String.format(
+                        "Olá %s,\n\nLembrete amigável: Você tem um agendamento marcado para amanhã (%s) às %s na barbearia %s.\n\nContamos com a sua presença!",
+                        ag.getCliente().getNome().split(" ")[0],
+                        ag.getDataHoraInicio().toLocalDate().toString(),
+                        ag.getDataHoraInicio().toLocalTime().toString().substring(0, 5),
+                        ag.getEstabelecimento().getNomeBarbearia());
+
+                emailService.enviarEmail(ag.getCliente().getEmail(), "Lembrete do seu Agendamento", mensagem);
+            } catch (Exception ignored) {
+            }
+        }
+    }
 
     public List<Agendamento> listarTodos() {
         return repository.findAll();
@@ -56,6 +88,16 @@ public class AgendamentoService {
             throw new IllegalArgumentException("O ID informado não pertence a um Estabelecimento válido.");
         }
         Estabelecimento estabelecimento = (Estabelecimento) usuarioEstabelecimento;
+
+        String diasFechados = estabelecimento.getDiasFechados();
+        String dataAgendamento = agendamento.getDataHoraInicio().toLocalDate().toString();
+
+        if (diasFechados != null && !diasFechados.isBlank()) {
+            List<String> fechados = Arrays.asList(diasFechados.split(","));
+            if (fechados.contains(dataAgendamento)) {
+                throw new IllegalArgumentException("O estabelecimento está fechado neste dia.");
+            }
+        }
 
         agendamento.setServico(servico);
         agendamento.setCliente(cliente);
@@ -91,11 +133,8 @@ public class AgendamentoService {
 
             String assuntoCliente = "Confirmação de Agendamento - " + estabelecimento.getNomeBarbearia();
             String mensagemCliente = String.format(
-                    "Olá %s,\n\nO seu agendamento foi confirmado com sucesso!\n\nDetalhes da sua marcação:\n📍 Barbearia: %s\n✂️ Serviço: %s\n📅 Data: %s\n⏰ Hora: %s\n\nAgradecemos a preferência e esperamos por si!",
-                    cliente.getNome().split(" ")[0],
-                    estabelecimento.getNomeBarbearia(),
-                    servico.getNome(),
-                    dataPt,
+                    "Olá %s,\n\nO seu agendamento foi confirmado com sucesso!\n\nDetalhes:\n📍 Barbearia: %s\n✂️ Serviço: %s\n📅 Data: %s\n⏰ Hora: %s\n\nAgradecemos a preferência!",
+                    cliente.getNome().split(" ")[0], estabelecimento.getNomeBarbearia(), servico.getNome(), dataPt,
                     horaFormatada);
             emailService.enviarEmail(cliente.getEmail(), assuntoCliente, mensagemCliente);
 
@@ -104,18 +143,93 @@ public class AgendamentoService {
             String assuntoEst = "Novo Agendamento: " + cliente.getNome().split(" ")[0] + " - " + dataPt + " às "
                     + horaFormatada;
             String mensagemEst = String.format(
-                    "Olá %s,\n\nVocê tem um novo agendamento!\n\n👤 Cliente: %s\n✂️ Serviço: %s\n📅 Data: %s\n⏰ Hora: %s\n\nAbra o painel de gestão para visualizar a sua agenda atualizada.",
-                    nomeBarbearia,
-                    cliente.getNome(),
-                    servico.getNome(),
-                    dataPt,
-                    horaFormatada);
+                    "Olá %s,\n\nVocê acabou de receber uma nova marcação!\n\n👤 Cliente: %s\n✂️ Serviço: %s\n📅 Data: %s\n⏰ Hora: %s",
+                    nomeBarbearia, cliente.getNome(), servico.getNome(), dataPt, horaFormatada);
             emailService.enviarEmail(estabelecimento.getEmail(), assuntoEst, mensagemEst);
 
         } catch (Exception e) {
-            System.err.println("Aviso: Falha ao enviar e-mail de notificação de agendamento - " + e.getMessage());
+            System.err.println("Aviso: Falha ao enviar e-mail de notificação - " + e.getMessage());
         }
+
         return salvo;
+    }
+
+    public List<String> buscarHorariosDisponiveis(Long estabelecimentoId, Long servicoId, java.time.LocalDate data) {
+        Usuario user = usuarioRepository.findById(estabelecimentoId).orElseThrow();
+        if (!(user instanceof Estabelecimento))
+            return Collections.emptyList();
+        Estabelecimento est = (Estabelecimento) user;
+
+        if (est.getDiasFechados() != null
+                && Arrays.asList(est.getDiasFechados().split(",")).contains(data.toString())) {
+            return Collections.emptyList();
+        }
+
+        Servico servico = servicoRepository.findById(servicoId).orElseThrow();
+        int duracao = servico.getDuracaoMinutos();
+
+        String[] nomesDias = { "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo" };
+        String diaDaSemana = nomesDias[data.getDayOfWeek().getValue() - 1];
+
+        String hrJson = est.getHorariosFuncionamento();
+        if (hrJson == null || hrJson.isBlank())
+            return Collections.emptyList();
+
+        List<String> slotsDisponiveis = new ArrayList<>();
+
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            List<Map<String, String>> horariosDaSemana = mapper.readValue(hrJson,
+                    new TypeReference<List<Map<String, String>>>() {
+                    });
+
+            Map<String, String> configDia = horariosDaSemana.stream()
+                    .filter(h -> diaDaSemana.equalsIgnoreCase(h.get("dia")))
+                    .findFirst().orElse(null);
+
+            if (configDia == null)
+                return Collections.emptyList();
+
+            List<Agendamento> ocupados = repository.buscarAtivosPorEstabelecimentoEDia(
+                    estabelecimentoId, data.atStartOfDay(), data.atTime(23, 59, 59), StatusAgendamento.CANCELADO);
+
+            gerarSlotsNoTurno(data, configDia.get("abertura1"), configDia.get("fechamento1"), duracao, ocupados,
+                    slotsDisponiveis);
+            gerarSlotsNoTurno(data, configDia.get("abertura2"), configDia.get("fechamento2"), duracao, ocupados,
+                    slotsDisponiveis);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return slotsDisponiveis;
+    }
+
+    private void gerarSlotsNoTurno(LocalDate data, String abertura, String fechamento, int duracaoServico,
+            List<Agendamento> ocupados, List<String> slots) {
+        if (abertura == null || fechamento == null || abertura.isBlank() || fechamento.isBlank())
+            return;
+
+        LocalTime horaAtual = LocalTime.parse(abertura);
+        LocalTime horaFimTurno = LocalTime.parse(fechamento);
+
+        while (horaAtual.plusMinutes(duracaoServico).compareTo(horaFimTurno) <= 0) {
+            LocalDateTime inicioSlot = data.atTime(horaAtual);
+            LocalDateTime fimSlot = inicioSlot.plusMinutes(duracaoServico);
+
+            boolean conflito = ocupados.stream().anyMatch(ag -> {
+                LocalDateTime agInicio = ag.getDataHoraInicio();
+                LocalDateTime agFim = agInicio.plusMinutes(ag.getServico().getDuracaoMinutos());
+                return inicioSlot.isBefore(agFim) && fimSlot.isAfter(agInicio);
+            });
+
+            if (!conflito) {
+                slots.add(horaAtual.toString().substring(0, 5));
+                horaAtual = horaAtual.plusMinutes(duracaoServico);
+            } else {
+                horaAtual = horaAtual.plusMinutes(30);
+            }
+        }
     }
 
     @Transactional
@@ -243,31 +357,27 @@ public class AgendamentoService {
         LocalDateTime inicioDia = data.atStartOfDay();
         LocalDateTime fimDia = inicioDia.plusDays(1).minusNanos(1);
 
-        List<Agendamento> agendamentos = repository.findByEstabelecimentoId(estabelecimentoId);
+        List<Agendamento> agendamentos = repository.buscarAtivosPorEstabelecimentoEDia(estabelecimentoId, inicioDia,
+                fimDia, StatusAgendamento.CANCELADO);
         int cancelados = 0;
 
         for (Agendamento ag : agendamentos) {
-            if (!ag.getDataHoraInicio().isBefore(inicioDia) && !ag.getDataHoraInicio().isAfter(fimDia)) {
-                if (ag.getStatus() == StatusAgendamento.AGENDADO
-                        || ag.getStatus() == StatusAgendamento.REAGENDAMENTO_PENDENTE) {
-                    ag.setStatus(StatusAgendamento.CANCELADO);
-                    repository.save(ag);
-                    cancelados++;
+            ag.setStatus(StatusAgendamento.CANCELADO);
+            repository.save(ag);
+            cancelados++;
 
-                    try {
-                        String assunto = "Aviso Importante: Agendamento Cancelado - "
-                                + ag.getEstabelecimento().getNomeBarbearia();
-                        String dataFormatada = ag.getDataHoraInicio().toLocalDate().toString();
-                        String horaFormatada = ag.getDataHoraInicio().toLocalTime().toString().substring(0, 5);
-                        String mensagem = String.format(
-                                "Olá %s,\n\nInfelizmente a barbearia %s precisou fechar no dia %s e o seu agendamento das %s foi cancelado.\n\nPor favor, acesse o aplicativo para escolher um novo horário.\n\nPedimos desculpas pelo transtorno.",
-                                ag.getCliente().getNome().split(" ")[0], ag.getEstabelecimento().getNomeBarbearia(),
-                                dataFormatada, horaFormatada);
-                        emailService.enviarEmail(ag.getCliente().getEmail(), assunto, mensagem);
-                    } catch (Exception e) {
-                        System.err.println("Erro e-mail: " + e.getMessage());
-                    }
-                }
+            try {
+                String assunto = "Aviso Importante: Agendamento Cancelado - "
+                        + ag.getEstabelecimento().getNomeBarbearia();
+                String dataFormatada = ag.getDataHoraInicio().toLocalDate().toString();
+                String horaFormatada = ag.getDataHoraInicio().toLocalTime().toString().substring(0, 5);
+                String mensagem = String.format(
+                        "Olá %s,\n\nInfelizmente a barbearia %s precisou fechar no dia %s e o seu agendamento das %s foi cancelado.\n\nPor favor, acesse o aplicativo para escolher um novo horário.\n\nPedimos desculpas pelo transtorno.",
+                        ag.getCliente().getNome().split(" ")[0], ag.getEstabelecimento().getNomeBarbearia(),
+                        dataFormatada, horaFormatada);
+                emailService.enviarEmail(ag.getCliente().getEmail(), assunto, mensagem);
+            } catch (Exception e) {
+                System.err.println("Erro e-mail: " + e.getMessage());
             }
         }
 
@@ -294,11 +404,10 @@ public class AgendamentoService {
         Usuario user = usuarioRepository.findById(estabelecimentoId).orElse(null);
         if (user instanceof Estabelecimento) {
             Estabelecimento est = (Estabelecimento) user;
-            if (est.getDiasFechados() != null) {
-                String dataStr = data.toString();
-                String novosDias = est.getDiasFechados().replace(dataStr, "").replace(",,", ",").replaceAll("^,|,$",
-                        "");
-                est.setDiasFechados(novosDias);
+            if (est.getDiasFechados() != null && !est.getDiasFechados().isBlank()) {
+                List<String> dias = new ArrayList<>(Arrays.asList(est.getDiasFechados().split(",")));
+                dias.remove(data.toString());
+                est.setDiasFechados(String.join(",", dias));
                 usuarioRepository.save(est);
             }
         } else if (user != null) {
