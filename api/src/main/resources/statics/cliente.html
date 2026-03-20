@@ -1039,6 +1039,11 @@
         }
 
         async function finalizarReserva() {
+            const btnConfirmar = document.querySelector('#modalAgendamento .modal-footer .btn-custom');
+            if (btnConfirmar) {
+                btnConfirmar.disabled = true;
+                btnConfirmar.innerText = "A processar...";
+            }
             try {
                 let url = 'http://localhost:8080/api/agendamentos';
                 let method = 'POST';
@@ -1068,9 +1073,15 @@
 
                 alert(idReagendamento ? "Proposta de novo horário enviada à barbearia!" : "Agendamento confirmado com sucesso!");
                 location.reload();
-            } catch (error) { alert("Erro de comunicação."); }
+            } catch (error) {
+                alert("Erro de comunicação.");
+            } finally {
+                if (btnConfirmar) {
+                    btnConfirmar.disabled = false;
+                    btnConfirmar.innerText = "Confirmar Agendamento";
+                }
+            }
         }
-
         async function carregarMeusAgs() {
             const res = await fetch('http://localhost:8080/api/agendamentos', { headers: getHeaders() });
             if (!res.ok) return;

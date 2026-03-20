@@ -14,7 +14,7 @@ import java.util.Date;
 @Service
 public class JwtService {
 
-    @Value("${api.security.token.secret}")
+    @Value("${JWT_SECRET:z$C&F)J@NcRfUjXn2r5u8x!A%D*G-KaPdSgVkYp3s6v9y/B?E(H+MbQeThWmZq4t}")
     private String secret;
 
     private final long EXPIRATION_TIME = Duration.ofHours(24).toMillis();

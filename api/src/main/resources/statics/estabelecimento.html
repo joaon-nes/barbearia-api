@@ -207,9 +207,9 @@
                         <div class="d-flex align-items-center gap-2">
                             <h6 class="text-muted fw-bold m-0" id="tituloDataSelecionada">Hoje</h6>
                             <button id="btnFecharDia" class="btn btn-sm btn-outline-danger py-0 px-2"
-                                style="font-size: 0.75rem;"><i class="bi bi-calendar-x"></i> Fechar Dia</button>
+                                style="font-size: 0.75rem;">Fechar Dia</button>
                         </div>
-                        <span class="badge bg-success" id="lucroEstimadoData">Faturado: R$ 0,00</span>
+                        <span id="lucroEstimadoData">Faturado: R$ 0,00</span>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-hover align-middle m-0">
@@ -492,6 +492,14 @@
 
         let ultimoMaxIdAgendamento = 0;
 
+        function getHeaders() {
+            const token = localStorage.getItem('token');
+            return {
+                'Content-Type': 'application/json',
+                'Authorization': token ? `Bearer ${token}` : ''
+            };
+        }
+
         function mostrarToast(mensagem) {
             document.getElementById('toastMensagem').innerHTML = `${mensagem}`;
             const toastEl = document.getElementById('toastNovoAgendamento');
@@ -576,14 +584,15 @@
             reader.onload = async (ev) => {
                 const base64 = ev.target.result;
                 document.getElementById('capaBarbearia').style.backgroundImage = `url(${base64})`;
-                await fetch(`http://localhost:8080/api/usuarios/${usuarioAtual.id}/foto`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fotoPerfil: base64 }) });
+                await fetch(`http://localhost:8080/api/usuarios/${usuarioAtual.id}/foto`, {
+                    method: 'PUT', headers: getHeaders(), body: JSON.stringify({ fotoPerfil: base64 })
+                });
                 usuarioAtual.fotoPerfil = base64; localStorage.setItem('usuarioLogado', JSON.stringify(usuarioAtual));
             };
             reader.readAsDataURL(e.target.files[0]);
         }
 
         const diasMapa = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-
 
         function inicializarDatasAgenda() {
             const container = document.getElementById('agendaDatasContainer');
@@ -608,19 +617,24 @@
         }
 
         async function buscarAgendamentosDaApi(dataIso = null) {
-            const res = await fetch(`http://localhost:8080/api/agendamentos/estabelecimento/${usuarioAtual.id}`);
-            todosMeusAgendamentos = await res.json();
+            try {
+                const res = await fetch(`http://localhost:8080/api/agendamentos/estabelecimento/${usuarioAtual.id}`, { headers: getHeaders() });
+                if (!res.ok) throw new Error("Acesso negado");
+                todosMeusAgendamentos = await res.json();
 
-            if (ultimoMaxIdAgendamento === 0 && todosMeusAgendamentos.length > 0) {
-                ultimoMaxIdAgendamento = Math.max(...todosMeusAgendamentos.map(ag => ag.id));
+                if (ultimoMaxIdAgendamento === 0 && todosMeusAgendamentos.length > 0) {
+                    ultimoMaxIdAgendamento = Math.max(...todosMeusAgendamentos.map(ag => ag.id));
+                }
+
+                if (dataIso) filtrarAgendaPorData(dataIso);
+            } catch (e) {
+                if (e.message === "Acesso negado") logout();
             }
-
-            if (dataIso) filtrarAgendaPorData(dataIso);
         }
 
         async function verificarNovosAgendamentos() {
             try {
-                const res = await fetch(`http://localhost:8080/api/agendamentos/estabelecimento/${usuarioAtual.id}`);
+                const res = await fetch(`http://localhost:8080/api/agendamentos/estabelecimento/${usuarioAtual.id}`, { headers: getHeaders() });
                 if (!res.ok) return;
 
                 const agendamentosRefresh = await res.json();
@@ -629,19 +643,15 @@
                     const maxIdAtual = Math.max(...agendamentosRefresh.map(ag => ag.id));
 
                     if (ultimoMaxIdAgendamento > 0 && maxIdAtual > ultimoMaxIdAgendamento) {
-
                         const novos = agendamentosRefresh.filter(ag => ag.id > ultimoMaxIdAgendamento);
 
                         novos.forEach(novoAg => {
                             if (novoAg.status === 'AGENDADO') {
                                 const nomeCliente = novoAg.cliente?.nome.split(' ')[0] || 'Cliente';
-
                                 const dataIso = novoAg.dataHoraInicio.split('T')[0];
                                 const hora = novoAg.dataHoraInicio.split('T')[1].substring(0, 5);
-
                                 const hojeIso = new Date().toISOString().split('T')[0];
-                                let amanhãDate = new Date();
-                                amanhãDate.setDate(amanhãDate.getDate() + 1);
+                                let amanhãDate = new Date(); amanhãDate.setDate(amanhãDate.getDate() + 1);
                                 const amanhãIso = amanhãDate.toISOString().split('T')[0];
 
                                 let dataTexto = dataIso === hojeIso ? "Hoje" : (dataIso === amanhãIso ? "Amanhã" : dataIso.split('-').reverse().join('/'));
@@ -665,9 +675,7 @@
                         ultimoMaxIdAgendamento = maxIdAtual;
                     }
                 }
-            } catch (e) {
-                console.error("Modo offline ou falha na verificação periódica.");
-            }
+            } catch (e) { }
         }
 
         setInterval(verificarNovosAgendamentos, 10000);
@@ -735,20 +743,15 @@
 
                         for (let i = 1; i <= blocosExtras; i++) {
                             m += 30;
-                            if (m >= 60) {
-                                h += Math.floor(m / 60);
-                                m = m % 60;
-                            }
-
+                            if (m >= 60) { h += Math.floor(m / 60); m = m % 60; }
                             let timeStr = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
 
                             tbody.innerHTML += `
                                 <tr class="table-light text-muted" style="opacity: 0.65; font-size: 0.9rem;">
                                     <td class="border-top-0"><strong>${timeStr}</strong></td>
-                                    <td class="border-top-0" colspan="2"><i class="bi bi-arrow-return-right"></i> Continuação (${ag.cliente?.nome.split(' ')[0]})</td>
-                                    <td class="border-top-0 text-end"><span class="badge bg-secondary">Em andamento</span></td>
-                                </tr>
-                            `;
+                                    <td class="border-top-0" colspan="2"><i class="bi bi-arrow-return-right"></i> Continuação ${ag.cliente?.nome.split(' ')[0]}</td>
+                                    <td class="border-top-0 text-end"></td>
+                                </tr>`;
                         }
                     }
                 }
@@ -760,18 +763,18 @@
             let diasFechadosStr = usuarioAtual.diasFechados || "";
 
             if (diasFechadosStr.includes(dataIso)) {
-                btnFechar.innerHTML = '<i class="bi bi-door-open"></i> Reabrir Dia';
+                btnFechar.innerHTML = 'Reabrir Dia';
                 btnFechar.classList.replace('btn-outline-danger', 'btn-outline-success');
                 btnFechar.onclick = () => reabrirDia(dataIso);
             } else {
-                btnFechar.innerHTML = '<i class="bi bi-door-closed"></i> Fechar Dia';
+                btnFechar.innerHTML = 'Fechar Dia';
                 btnFechar.classList.replace('btn-outline-success', 'btn-outline-danger');
                 btnFechar.onclick = () => cancelarDiaInteiro(dataIso);
             }
         }
 
         async function carregarAvaliacoes() {
-            const res = await fetch(`http://localhost:8080/api/agendamentos/estabelecimento/${usuarioAtual.id}`);
+            const res = await fetch(`http://localhost:8080/api/agendamentos/estabelecimento/${usuarioAtual.id}`, { headers: getHeaders() });
             const todos = await res.json();
             const minhasAvaliacoes = todos.filter(ag => ag.notaAvaliacao != null).sort((a, b) => {
                 let dateA = a.dataAvaliacao || a.dataHoraInicio; let dateB = b.dataAvaliacao || b.dataHoraInicio; return dateB.localeCompare(dateA);
@@ -811,19 +814,19 @@
             let id = document.getElementById('idAgendamentoResponder').value;
             let resp = document.getElementById('textoResposta').value;
             if (resp && resp.trim() !== '') {
-                await fetch(`http://localhost:8080/api/agendamentos/${id}/responder-avaliacao`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ resposta: resp }) });
+                await fetch(`http://localhost:8080/api/agendamentos/${id}/responder-avaliacao`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ resposta: resp }) });
                 location.reload();
             } else { alert("A resposta não pode estar vazia."); }
         }
 
         async function mudarStatus(id, status, dataIso) {
             if (!confirm(`Confirmar ${status}?`)) return;
-            await fetch(`http://localhost:8080/api/agendamentos/${id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
+            await fetch(`http://localhost:8080/api/agendamentos/${id}/status`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ status }) });
             buscarAgendamentosDaApi(dataIso);
         }
 
         async function carregarServicos() {
-            const res = await fetch(`http://localhost:8080/api/servicos/estabelecimento/${usuarioAtual.id}`);
+            const res = await fetch(`http://localhost:8080/api/servicos/estabelecimento/${usuarioAtual.id}`, { headers: getHeaders() });
             servicosCache = await res.json();
             document.getElementById('listaServicos').innerHTML = servicosCache.map(s => `
                 <div class="card card-custom p-3 mb-2 d-flex flex-row justify-content-between align-items-center">
@@ -849,11 +852,11 @@
             const id = document.getElementById('idServicoEdicao').value;
             const dados = { nome: document.getElementById('nomeServico').value, preco: document.getElementById('precoServico').value, duracaoMinutos: document.getElementById('duracaoServico').value };
             const url = id ? `http://localhost:8080/api/servicos/${id}` : `http://localhost:8080/api/servicos/estabelecimento/${usuarioAtual.id}`;
-            await fetch(url, { method: id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
+            await fetch(url, { method: id ? 'PUT' : 'POST', headers: getHeaders(), body: JSON.stringify(dados) });
             cancelarEdicaoServico(); carregarServicos();
         };
 
-        async function eliminarServico(id) { if (confirm("Eliminar serviço?")) { await fetch(`http://localhost:8080/api/servicos/${id}`, { method: 'DELETE' }); carregarServicos(); } }
+        async function eliminarServico(id) { if (confirm("Eliminar serviço?")) { await fetch(`http://localhost:8080/api/servicos/${id}`, { method: 'DELETE', headers: getHeaders() }); carregarServicos(); } }
 
         function renderizarGaleriaEdit() {
             const container = document.getElementById('editGaleriaContainer');
@@ -878,12 +881,12 @@
 
         async function salvarGaleriaNoBackEnd() {
             usuarioAtual.fotosGaleria = JSON.stringify(fotosGaleriaAtual); localStorage.setItem('usuarioLogado', JSON.stringify(usuarioAtual));
-            try { await fetch(`http://localhost:8080/api/usuarios/${usuarioAtual.id}/galeria`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fotosGaleria: usuarioAtual.fotosGaleria }) }); } catch (e) { }
+            try { await fetch(`http://localhost:8080/api/usuarios/${usuarioAtual.id}/galeria`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ fotosGaleria: usuarioAtual.fotosGaleria }) }); } catch (e) { }
         }
 
         async function salvarTags() {
             let tagsVal = document.getElementById('editTags').value; usuarioAtual.tags = tagsVal; localStorage.setItem('usuarioLogado', JSON.stringify(usuarioAtual));
-            await fetch(`http://localhost:8080/api/usuarios/${usuarioAtual.id}/tags`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tags: tagsVal }) });
+            await fetch(`http://localhost:8080/api/usuarios/${usuarioAtual.id}/tags`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ tags: tagsVal }) });
             alert("Especialidades guardadas!");
         }
 
@@ -931,12 +934,10 @@
                 linkInstagram: document.getElementById('editInstagram').value, linkFacebook: document.getElementById('editFacebook').value, linkTiktok: document.getElementById('editTiktok').value,
                 cep: document.getElementById('editCep').value, rua: document.getElementById('editRua').value, numero: document.getElementById('editNumero').value, bairro: document.getElementById('editBairro').value,
                 cidade: usuarioAtual.cidade, estado: usuarioAtual.estado, horariosFuncionamento: JSON.stringify(horários), comodidades: comodidadesArray.join(','),
-
-                latitude: parseFloat(document.getElementById('editLat').value),
-                longitude: parseFloat(document.getElementById('editLng').value)
+                latitude: parseFloat(document.getElementById('editLat').value), longitude: parseFloat(document.getElementById('editLng').value)
             };
 
-            const res = await fetch(`http://localhost:8080/api/usuarios/${usuarioAtual.id}/completar-perfil`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados) });
+            const res = await fetch(`http://localhost:8080/api/usuarios/${usuarioAtual.id}/completar-perfil`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify(dados) });
             const at = await res.json(); localStorage.setItem('usuarioLogado', JSON.stringify(at)); alert("Perfil Atualizado!"); window.location.reload();
         };
 
@@ -951,7 +952,7 @@
             if (!data || !hora) { alert("Selecione data e horário."); return; }
             hora = hora.substring(0, 5);
             try {
-                const response = await fetch(`http://localhost:8080/api/agendamentos/${id}/propor-reagendamento`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dataHoraProposta: `${data}T${hora}:00`, quemSugeriu: 'ESTABELECIMENTO' }) });
+                const response = await fetch(`http://localhost:8080/api/agendamentos/${id}/propor-reagendamento`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ dataHoraProposta: `${data}T${hora}:00`, quemSugeriu: 'ESTABELECIMENTO' }) });
                 if (!response.ok) { const error = await response.json(); alert("Aviso: " + (error.erro || "Horário indisponível")); return; }
                 alert("Proposta enviada!"); location.reload();
             } catch (e) { alert("Erro de rede."); }
@@ -960,7 +961,7 @@
         async function cancelarDiaInteiro(dataIso) {
             if (!confirm("Tem certeza que deseja fechar o estabelecimento neste dia?\n\n- Agendamentos cancelados.\n- E-mails disparados.")) return;
             try {
-                const response = await fetch(`http://localhost:8080/api/agendamentos/estabelecimento/${usuarioAtual.id}/fechar-dia`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: dataIso }) });
+                const response = await fetch(`http://localhost:8080/api/agendamentos/estabelecimento/${usuarioAtual.id}/fechar-dia`, { method: 'POST', headers: getHeaders(), body: JSON.stringify({ data: dataIso }) });
                 if (!response.ok) { alert("Erro ao fechar."); return; }
                 let diasAtuais = usuarioAtual.diasFechados || ""; usuarioAtual.diasFechados = diasAtuais ? diasAtuais + "," + dataIso : dataIso; localStorage.setItem('usuarioLogado', JSON.stringify(usuarioAtual));
                 const resData = await response.json(); alert(resData.mensagem); buscarAgendamentosDaApi(dataIso);
@@ -970,15 +971,15 @@
         async function reabrirDia(dataIso) {
             if (!confirm("Deseja reabrir este dia?")) return;
             try {
-                const response = await fetch(`http://localhost:8080/api/agendamentos/estabelecimento/${usuarioAtual.id}/reabrir-dia`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data: dataIso }) });
+                const response = await fetch(`http://localhost:8080/api/agendamentos/estabelecimento/${usuarioAtual.id}/reabrir-dia`, { method: 'POST', headers: getHeaders(), body: JSON.stringify({ data: dataIso }) });
                 if (!response.ok) { alert("Erro ao reabrir."); return; }
                 if (usuarioAtual.diasFechados) { usuarioAtual.diasFechados = usuarioAtual.diasFechados.replace(dataIso, "").replace(",,", ",").replace(/^,|,$/g, ""); localStorage.setItem('usuarioLogado', JSON.stringify(usuarioAtual)); }
                 alert("Reaberto!"); buscarAgendamentosDaApi(dataIso);
             } catch (e) { alert("Erro."); }
         }
 
-        async function aceitarPropostaEst(id) { await fetch(`http://localhost:8080/api/agendamentos/${id}/confirmar-reagendamento`, { method: 'PUT' }); alert("Aceito!"); location.reload(); }
-        async function excluirAgendamentoDefinitivo(id) { if (!confirm("Apagar registro?")) return; await fetch(`http://localhost:8080/api/agendamentos/${id}`, { method: 'DELETE' }); location.reload(); }
+        async function aceitarPropostaEst(id) { await fetch(`http://localhost:8080/api/agendamentos/${id}/confirmar-reagendamento`, { method: 'PUT', headers: getHeaders() }); alert("Aceito!"); location.reload(); }
+        async function excluirAgendamentoDefinitivo(id) { if (!confirm("Apagar registro?")) return; await fetch(`http://localhost:8080/api/agendamentos/${id}`, { method: 'DELETE', headers: getHeaders() }); location.reload(); }
 
         inicializarDatasAgenda();
     </script>

@@ -42,7 +42,6 @@ public class UsuarioController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // NOVO ENDPOINT DE GEOLOCALIZAÇÃO
     @GetMapping("/estabelecimentos/proximos")
     public ResponseEntity<List<Estabelecimento>> buscarProximos(
             @RequestParam double lat, @RequestParam double lng,
@@ -158,6 +157,16 @@ public class UsuarioController {
         }
 
         return repository.findById(id).map(u -> {
+            if (dadosCompletos.containsKey("telefone")) {
+                String novoTelefone = (String) dadosCompletos.get("telefone");
+                
+                if (novoTelefone != null && !novoTelefone.equals(u.getTelefone())) {
+                    if (repository.existsByTelefone(novoTelefone)) {
+                        return ResponseEntity.badRequest().body(Map.of("erro", "Este número de telemóvel já está associado a outra conta."));
+                    }
+                }
+            }
+
             if (u instanceof Estabelecimento) {
                 Estabelecimento est = (Estabelecimento) u;
 

@@ -15,6 +15,8 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
     Optional<Usuario> findByEmail(String email);
 
+    boolean existsByTelefone(String telefone);
+
     @Query(value = "SELECT * FROM usuario WHERE dtype = 'Estabelecimento' AND latitude IS NOT NULL AND ST_Distance_Sphere(POINT(longitude, latitude), POINT(:lng, :lat)) / 1000 <= :raioKm ORDER BY ST_Distance_Sphere(POINT(longitude, latitude), POINT(:lng, :lat))", nativeQuery = true)
     List<Estabelecimento> buscarEstabelecimentosProximos(@Param("lat") double lat, @Param("lng") double lng,
             @Param("raioKm") double raioKm);

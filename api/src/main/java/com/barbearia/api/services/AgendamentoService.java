@@ -82,6 +82,18 @@ public class AgendamentoService {
         }
         Cliente cliente = (Cliente) usuarioCliente;
 
+        int agendamentosAtivos = repository.countByClienteIdAndStatus(cliente.getId(), StatusAgendamento.AGENDADO);
+
+        int limitePermitido = Boolean.TRUE.equals(cliente.getContaVerificada()) ? 3 : 1;
+
+        if (agendamentosAtivos >= limitePermitido) {
+            String msgExtra = limitePermitido == 1
+                    ? " Após comparecer ao seu primeiro corte, o seu limite aumentará para 3."
+                    : "";
+            throw new IllegalArgumentException("Você possui " + agendamentosAtivos +
+                    " agendamento(s) ativo(s). Conclua-os ou cancele-os antes de marcar um novo." + msgExtra);
+        }
+
         Usuario usuarioEstabelecimento = usuarioRepository.findById(agendamento.getEstabelecimento().getId())
                 .orElseThrow(() -> new IllegalArgumentException("Estabelecimento não encontrado."));
         if (!(usuarioEstabelecimento instanceof Estabelecimento)) {
