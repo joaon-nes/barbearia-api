@@ -30,5 +30,5 @@ public class Servico {
 
     @ManyToOne
     @JoinColumn(name = "estabelecimento_id")
-    private Usuario estabelecimento;
+    private Estabelecimento estabelecimento;
 }

@@ -2,6 +2,7 @@ package com.barbearia.api.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -33,7 +34,11 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/usuarios/login", "/api/usuarios", "/api/usuarios/validar-2fa")
+                        .requestMatchers(HttpMethod.POST, "/api/usuarios", "/api/usuarios/login",
+                                "/api/usuarios/validar-2fa")
+                        .permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/servicos/estabelecimento/**",
+                                "/api/usuarios/estabelecimentos/proximos")
                         .permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

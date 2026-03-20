@@ -921,17 +921,40 @@
             let hoje = new Date();
             const dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
+            const diasL = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+            let configHorarios = JSON.parse(estSel.horariosFuncionamento || '[]');
+            let diasFechadosStr = estSel.diasFechados || "";
+
             for (let i = 0; i < 14; i++) {
                 let d = new Date(hoje);
                 d.setDate(hoje.getDate() + i);
                 let iso = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-                container.innerHTML += `
-                    <div class="date-card" id="d-${iso}" onclick="selData('${iso}', '${d.getDay()}')">
-                        <small>${dias[d.getDay()]}</small><br><strong>${d.getDate()}</strong>
-                    </div>`;
+
+                let dIdx = d.getDay();
+                let nomeDiaSemana = diasL[dIdx == 0 ? 6 : dIdx - 1];
+                let configDia = configHorarios.find(x => x.dia === nomeDiaSemana);
+
+                let semHorarioFixo = !configDia || (!configDia.abertura1 && !configDia.abertura2);
+                let fechadoExcecao = diasFechadosStr.includes(iso);
+
+                if (semHorarioFixo || fechadoExcecao) {
+                    container.innerHTML += `
+                        <div class="date-card" style="opacity: 0.4; cursor: not-allowed; background-color: #e9ecef; border-color: #ddd;" title="Fechado">
+                            <small class="text-muted">${dias[d.getDay()]}</small><br><strong class="text-muted">${d.getDate()}</strong>
+                        </div>`;
+                } else {
+                    container.innerHTML += `
+                        <div class="date-card" id="d-${iso}" onclick="selData('${iso}', '${d.getDay()}')">
+                            <small>${dias[d.getDay()]}</small><br><strong>${d.getDate()}</strong>
+                        </div>`;
+                }
             }
+
             new bootstrap.Modal('#modalAgendamento').show();
-            if (isEdicao) document.getElementById('d-' + dataSel).click();
+
+            if (isEdicao && document.getElementById('d-' + dataSel)) {
+                document.getElementById('d-' + dataSel).click();
+            }
         }
 
         async function iniciarReagendamento(agId, estId, servId) {

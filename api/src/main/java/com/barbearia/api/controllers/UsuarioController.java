@@ -56,6 +56,7 @@ public class UsuarioController {
 
         String codigo = String.format("%06d", secureRandom.nextInt(999999));
         usuario.setCodigo2fa(codigo);
+        usuario.setDataExpiracao2fa(java.time.LocalDateTime.now().plusMinutes(15));
 
         if (usuario instanceof Cliente) {
             ((Cliente) usuario).setContaVerificada(false);
@@ -98,6 +99,7 @@ public class UsuarioController {
             if (usuario.getCodigo2fa() == null) {
                 String novoCodigo = String.format("%06d", secureRandom.nextInt(999999));
                 usuario.setCodigo2fa(novoCodigo);
+                usuario.setDataExpiracao2fa(java.time.LocalDateTime.now().plusMinutes(15));
                 repository.save(usuario);
                 try {
                     emailService.enviarEmail(usuario.getEmail(), "Código de Ativação",
@@ -131,7 +133,12 @@ public class UsuarioController {
         Usuario usuario = userOpt.get();
 
         if (usuario.getCodigo2fa() != null && usuario.getCodigo2fa().equals(codigo)) {
+            if (usuario.getDataExpiracao2fa() != null
+                    && java.time.LocalDateTime.now().isAfter(usuario.getDataExpiracao2fa())) {
+                return ResponseEntity.status(401).body("Código expirado. Faça login novamente para gerar um novo.");
+            }
             usuario.setCodigo2fa(null);
+            usuario.setDataExpiracao2fa(null);
             usuario.setAtivo(true);
 
             repository.save(usuario);
@@ -159,10 +166,11 @@ public class UsuarioController {
         return repository.findById(id).map(u -> {
             if (dadosCompletos.containsKey("telefone")) {
                 String novoTelefone = (String) dadosCompletos.get("telefone");
-                
+
                 if (novoTelefone != null && !novoTelefone.equals(u.getTelefone())) {
                     if (repository.existsByTelefone(novoTelefone)) {
-                        return ResponseEntity.badRequest().body(Map.of("erro", "Este número de telemóvel já está associado a outra conta."));
+                        return ResponseEntity.badRequest()
+                                .body(Map.of("erro", "Este número de telemóvel já está associado a outra conta."));
                     }
                 }
             }
@@ -218,6 +226,10 @@ public class UsuarioController {
 
     @PutMapping("/{id}/tags")
     public ResponseEntity<?> atualizarTags(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        Usuario usuarioLogado = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (!usuarioLogado.getId().equals(id))
+            return ResponseEntity.status(403).build();
+
         return repository.findById(id).map(u -> {
             if (u instanceof Estabelecimento) {
                 ((Estabelecimento) u).setTags(body.get("tags"));
@@ -229,6 +241,9 @@ public class UsuarioController {
 
     @PutMapping("/{id}/foto")
     public ResponseEntity<?> atualizarFoto(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        Usuario usuarioLogado = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (!usuarioLogado.getId().equals(id))
+            return ResponseEntity.status(403).body("Acesso negado.");
         return repository.findById(id).map(u -> {
             u.setFotoPerfil(body.get("fotoPerfil"));
             return ResponseEntity.ok(repository.save(u));
@@ -237,6 +252,9 @@ public class UsuarioController {
 
     @PutMapping("/{id}/galeria")
     public ResponseEntity<?> atualizarGaleria(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        Usuario usuarioLogado = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (!usuarioLogado.getId().equals(id))
+            return ResponseEntity.status(403).body("Acesso negado.");
         return repository.findById(id).map(u -> {
             if (u instanceof Estabelecimento) {
                 ((Estabelecimento) u).setFotosGaleria(body.get("fotosGaleria"));

@@ -291,6 +291,22 @@
                 <div id="listaAvaliacoesContainer"></div>
             </div>
 
+            <div id="tab-financeiro" class="tab-content">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="text-primary-custom fw-bold m-0">Desempenho</h4>
+                    <select id="filtroPeriodoFin" class="form-select form-select-sm w-auto shadow-sm border-0"
+                        onchange="gerarRelatorioFinanceiro()">
+                        <option value="hoje">Hoje</option>
+                        <option value="semana">Últimos 7 Dias</option>
+                        <option value="mes">Este Mês</option>
+                        <option value="tudo" selected>Todo o Período</option>
+                    </select>
+                </div>
+
+                <div id="areaRelatorio">
+                </div>
+            </div>
+
             <div id="tab-perfil" class="tab-content">
                 <h4 class="text-primary-custom fw-bold mb-3">Sua Barbearia</h4>
                 <form id="formEditarPerfil">
@@ -446,6 +462,9 @@
                     class="position-absolute top-0 start-50 translate-middle badge rounded-pill bg-danger"
                     style="display: none; font-size: 0.6rem;">0</span>
             </div>
+            <div class="nav-item" onclick="mudarAba('financeiro', this)">
+                <i class="bi bi-graph-up-arrow fs-4"></i><span>Resumo</span>
+            </div>
             <div class="nav-item" onclick="mudarAba('perfil', this)">
                 <i class="bi bi-shop fs-4"></i><span>Barbearia</span>
             </div>
@@ -544,12 +563,16 @@
                 document.getElementById('badgeAgenda').style.display = 'none';
             }
 
-            if (abaId === 'servicos') { carregarServicos(); document.getElementById('editTags').value = usuarioAtual.tags || ''; renderizarGaleriaEdit(); }
+            if (abaId === 'servicos') {
+                carregarServicos();
+                document.getElementById('editTags').value = usuarioAtual.tags || ''; renderizarGaleriaEdit();
+            }
             if (abaId === 'perfil') {
                 preencherFormPerfil();
                 setTimeout(carregarMapaPerfil, 150);
             }
             if (abaId === 'avaliacoes') carregarAvaliacoes();
+            if (abaId === 'financeiro') gerarRelatorioFinanceiro();
         }
 
         function carregarMapaPerfil() {
@@ -980,6 +1003,110 @@
 
         async function aceitarPropostaEst(id) { await fetch(`http://localhost:8080/api/agendamentos/${id}/confirmar-reagendamento`, { method: 'PUT', headers: getHeaders() }); alert("Aceito!"); location.reload(); }
         async function excluirAgendamentoDefinitivo(id) { if (!confirm("Apagar registro?")) return; await fetch(`http://localhost:8080/api/agendamentos/${id}`, { method: 'DELETE', headers: getHeaders() }); location.reload(); }
+
+        function gerarRelatorioFinanceiro() {
+            const periodo = document.getElementById('filtroPeriodoFin').value;
+            const hoje = new Date();
+            hoje.setHours(23, 59, 59, 999);
+
+            let dataInicio = new Date(0);
+
+            if (periodo === 'hoje') {
+                dataInicio = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+            } else if (periodo === 'semana') {
+                dataInicio = new Date(hoje);
+                dataInicio.setDate(hoje.getDate() - 7);
+                dataInicio.setHours(0, 0, 0, 0);
+            } else if (periodo === 'mes') {
+                dataInicio = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+            }
+
+            const concluidos = todosMeusAgendamentos.filter(ag => ag.status === 'CONCLUIDO');
+
+            const primeiraVisitaCliente = {};
+            concluidos.forEach(ag => {
+                const id = ag.cliente?.id;
+                if (!id) return;
+                const dataAg = new Date(ag.dataHoraInicio);
+                if (!primeiraVisitaCliente[id] || dataAg < primeiraVisitaCliente[id]) {
+                    primeiraVisitaCliente[id] = dataAg;
+                }
+            });
+
+            const agsNoPeriodo = concluidos.filter(ag => {
+                const d = new Date(ag.dataHoraInicio);
+                return d >= dataInicio && d <= hoje;
+            });
+
+            const clientesUnicos = new Set(agsNoPeriodo.map(ag => ag.cliente?.id)).size;
+
+            const setNovosClientes = new Set();
+            agsNoPeriodo.forEach(ag => {
+                const id = ag.cliente?.id;
+                if (id && primeiraVisitaCliente[id] >= dataInicio) {
+                    setNovosClientes.add(id);
+                }
+            });
+            const novosClientes = setNovosClientes.size;
+
+            let totalBruto = 0;
+            const servicosStats = {};
+
+            agsNoPeriodo.forEach(ag => {
+                const preco = ag.servico?.preco || 0;
+                const nome = ag.servico?.nome || 'Desconhecido';
+                totalBruto += preco;
+
+                if (!servicosStats[nome]) servicosStats[nome] = { qtd: 0, total: 0 };
+                servicosStats[nome].qtd += 1;
+                servicosStats[nome].total += preco;
+            });
+
+            let htmlServicos = '';
+            for (let srv in servicosStats) {
+                htmlServicos += `
+                    <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                        <div>
+                            <strong class="small text-dark">${srv}</strong><br>
+                            <small class="text-muted">${servicosStats[srv].qtd} prestados</small>
+                        </div>
+                        <strong class="text-success small">R$ ${servicosStats[srv].total.toFixed(2)}</strong>
+                    </div>`;
+            }
+
+            if (Object.keys(servicosStats).length === 0) {
+                htmlServicos = '<div class="text-center text-muted small py-4"><i class="bi bi-inbox fs-3 d-block mb-2"></i>Nenhum serviço concluído neste período.</div>';
+            }
+
+            document.getElementById('areaRelatorio').innerHTML = `
+                <div class="card bg-success text-white p-3 mb-3 border-0 shadow-sm rounded-4 text-center" style="background: linear-gradient(135deg, #198754, #20c997);">
+                    <small class="fw-bold opacity-75 d-block mb-1">TOTAL BRUTO</small>
+                    <h2 class="m-0 fw-bold">R$ ${totalBruto.toFixed(2)}</h2>
+                </div>
+                
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <div class="card p-3 border-0 shadow-sm rounded-4 text-center h-100">
+                            <i class="bi bi-people-fill text-primary fs-3 mb-1"></i>
+                            <h3 class="fw-bold m-0">${clientesUnicos}</h3>
+                            <small class="text-muted" style="font-size:0.7rem;">Clientes Atendidos</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="card p-3 border-0 shadow-sm rounded-4 text-center h-100">
+                            <i class="bi bi-person-plus-fill text-warning fs-3 mb-1"></i>
+                            <h3 class="fw-bold m-0">${novosClientes}</h3>
+                            <small class="text-muted" style="font-size:0.7rem;">Novos Clientes</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card p-3 border-0 shadow-sm rounded-4">
+                    <h6 class="fw-bold text-primary-custom mb-3"><i class="bi bi-scissors me-1"></i> Detalhamento por Serviço</h6>
+                    ${htmlServicos}
+                </div>
+            `;
+        }
 
         inicializarDatasAgenda();
     </script>

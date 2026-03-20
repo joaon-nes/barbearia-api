@@ -3,9 +3,11 @@ package com.barbearia.api.controllers;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import com.barbearia.api.models.Agendamento;
 import com.barbearia.api.models.StatusAgendamento;
+import com.barbearia.api.models.Usuario;
 import com.barbearia.api.services.AgendamentoService;
 import com.barbearia.api.repositories.ServicoRepository;
 import com.barbearia.api.repositories.UsuarioRepository;
@@ -68,16 +70,24 @@ public class AgendamentoController {
 
     @PutMapping("/{id}/status")
     public ResponseEntity<?> atualizarStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
-        return service.atualizarStatus(id, StatusAgendamento.valueOf(body.get("status")))
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        try {
+            return service.atualizarStatus(id, StatusAgendamento.valueOf(body.get("status")))
+                    .map(ResponseEntity::ok)
+                    .orElse(ResponseEntity.notFound().build());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
     }
 
     @PutMapping("/{id}/avaliar")
     public ResponseEntity<?> avaliarAgendamento(@PathVariable Long id, @RequestBody Map<String, Object> body) {
-        return service.avaliar(id, Integer.parseInt(body.get("nota").toString()), (String) body.get("comentario"))
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        try {
+            return service.avaliar(id, Integer.parseInt(body.get("nota").toString()), (String) body.get("comentario"))
+                    .map(ResponseEntity::ok)
+                    .orElse(ResponseEntity.notFound().build());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
     }
 
     @PutMapping("/{id}/responder-avaliacao")
@@ -88,9 +98,26 @@ public class AgendamentoController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
-        service.eliminar(id);
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<?> eliminar(@PathVariable Long id) {
+        Usuario usuarioLogado = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+        try {
+            Agendamento ag = service.listarTodos().stream()
+                    .filter(a -> a.getId().equals(id))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("Agendamento não encontrado."));
+
+            if (!ag.getCliente().getId().equals(usuarioLogado.getId())
+                    && !ag.getEstabelecimento().getId().equals(usuarioLogado.getId())) {
+                return ResponseEntity.status(403)
+                        .body(Map.of("erro", "Não tem permissão para apagar este agendamento."));
+            }
+
+            service.eliminar(id);
+            return ResponseEntity.noContent().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
     }
 
     @GetMapping("/cliente/{clienteId}")
@@ -152,6 +179,12 @@ public class AgendamentoController {
 
     @PostMapping("/estabelecimento/{estabelecimentoId}/fechar-dia")
     public ResponseEntity<?> fecharDia(@PathVariable Long estabelecimentoId, @RequestBody Map<String, String> body) {
+        Usuario usuarioLogado = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (!usuarioLogado.getId().equals(estabelecimentoId)) {
+            return ResponseEntity.status(403)
+                    .body(Map.of("erro", "Não autorizado a fechar dia deste estabelecimento."));
+        }
+
         try {
             java.time.LocalDate data = java.time.LocalDate.parse(body.get("data"));
             int cancelados = service.fecharDia(estabelecimentoId, data);
@@ -167,6 +200,12 @@ public class AgendamentoController {
 
     @PostMapping("/estabelecimento/{estabelecimentoId}/reabrir-dia")
     public ResponseEntity<?> reabrirDia(@PathVariable Long estabelecimentoId, @RequestBody Map<String, String> body) {
+        Usuario usuarioLogado = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (!usuarioLogado.getId().equals(estabelecimentoId)) {
+            return ResponseEntity.status(403)
+                    .body(Map.of("erro", "Não autorizado a reabrir dia deste estabelecimento."));
+        }
+
         try {
             java.time.LocalDate data = java.time.LocalDate.parse(body.get("data"));
             service.reabrirDia(estabelecimentoId, data);

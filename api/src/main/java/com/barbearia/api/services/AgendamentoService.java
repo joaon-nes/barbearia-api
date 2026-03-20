@@ -72,6 +72,10 @@ public class AgendamentoService {
 
     @Transactional
     public Agendamento criar(Agendamento agendamento) {
+        if (agendamento.getDataHoraInicio().isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Não é possível agendar um horário no passado.");
+        }
+
         Servico servico = servicoRepository.findById(agendamento.getServico().getId())
                 .orElseThrow(() -> new IllegalArgumentException("Serviço não encontrado."));
 
@@ -83,14 +87,13 @@ public class AgendamentoService {
         Cliente cliente = (Cliente) usuarioCliente;
 
         int agendamentosAtivos = repository.countByClienteIdAndStatus(cliente.getId(), StatusAgendamento.AGENDADO);
-
         int limitePermitido = Boolean.TRUE.equals(cliente.getContaVerificada()) ? 3 : 1;
 
         if (agendamentosAtivos >= limitePermitido) {
             String msgExtra = limitePermitido == 1
                     ? " Após comparecer ao seu primeiro corte, o seu limite aumentará para 3."
                     : "";
-            throw new IllegalArgumentException("Você possui " + agendamentosAtivos +
+            throw new IllegalArgumentException("Bloqueio de Segurança: Já possui " + agendamentosAtivos +
                     " agendamento(s) ativo(s). Conclua-os ou cancele-os antes de marcar um novo." + msgExtra);
         }
 
@@ -227,6 +230,12 @@ public class AgendamentoService {
 
         while (horaAtual.plusMinutes(duracaoServico).compareTo(horaFimTurno) <= 0) {
             LocalDateTime inicioSlot = data.atTime(horaAtual);
+
+            if (inicioSlot.isBefore(LocalDateTime.now())) {
+                horaAtual = horaAtual.plusMinutes(30);
+                continue;
+            }
+
             LocalDateTime fimSlot = inicioSlot.plusMinutes(duracaoServico);
 
             boolean conflito = ocupados.stream().anyMatch(ag -> {
@@ -237,16 +246,21 @@ public class AgendamentoService {
 
             if (!conflito) {
                 slots.add(horaAtual.toString().substring(0, 5));
-                horaAtual = horaAtual.plusMinutes(duracaoServico);
-            } else {
-                horaAtual = horaAtual.plusMinutes(30);
             }
+
+            horaAtual = horaAtual.plusMinutes(30);
         }
     }
 
     @Transactional
     public Optional<Agendamento> atualizarStatus(Long id, StatusAgendamento novoStatus) {
         return repository.findById(id).map(ag -> {
+
+            if ((ag.getStatus() == StatusAgendamento.CONCLUIDO || ag.getStatus() == StatusAgendamento.CANCELADO)
+                    && novoStatus == StatusAgendamento.AGENDADO) {
+                throw new IllegalArgumentException("Não é possível reverter o status de um agendamento já finalizado.");
+            }
+
             ag.setStatus(novoStatus);
             Agendamento salvo = repository.save(ag);
 
@@ -264,6 +278,9 @@ public class AgendamentoService {
     @Transactional
     public Optional<Agendamento> avaliar(Long id, Integer nota, String comentario) {
         return repository.findById(id).map(ag -> {
+            if (ag.getStatus() != StatusAgendamento.CONCLUIDO) {
+                throw new IllegalArgumentException("Apenas serviços concluídos podem ser avaliados.");
+            }
             ag.setNotaAvaliacao(nota);
             ag.setComentarioAvaliacao(comentario);
             ag.setDataAvaliacao(LocalDateTime.now());
@@ -287,6 +304,10 @@ public class AgendamentoService {
 
     @Transactional
     public Optional<Agendamento> reagendar(Long id, LocalDateTime novaDataHora) {
+        if (novaDataHora.isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Não é possível reagendar para um horário no passado.");
+        }
+
         return repository.findById(id).map(agendamento -> {
             LocalDateTime fimNovo = novaDataHora.plusMinutes(agendamento.getServico().getDuracaoMinutos());
             LocalDateTime inicioDia = novaDataHora.toLocalDate().atStartOfDay();
@@ -314,6 +335,10 @@ public class AgendamentoService {
 
     @Transactional
     public Optional<Agendamento> proporReagendamento(Long id, LocalDateTime novaDataHora, String quemSugeriu) {
+        if (novaDataHora.isBefore(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Não é possível propor um horário no passado.");
+        }
+
         return repository.findById(id).map(agendamento -> {
             LocalDateTime fimNovo = novaDataHora.plusMinutes(agendamento.getServico().getDuracaoMinutos());
             LocalDateTime inicioDia = novaDataHora.toLocalDate().atStartOfDay();

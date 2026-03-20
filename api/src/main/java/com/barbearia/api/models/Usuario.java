@@ -46,6 +46,9 @@ public abstract class Usuario {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String codigo2fa;
 
+    @Column(name = "data_expiracao_2fa")
+    private java.time.LocalDateTime dataExpiracao2fa;
+
     private Boolean ativo;
     private String telefone;
 
