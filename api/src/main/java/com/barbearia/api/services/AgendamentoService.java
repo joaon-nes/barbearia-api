@@ -5,11 +5,14 @@ import com.barbearia.api.models.Cliente;
 import com.barbearia.api.models.Estabelecimento;
 import com.barbearia.api.models.Servico;
 import com.barbearia.api.models.StatusAgendamento;
+import com.barbearia.api.models.StatusPagamento;
 import com.barbearia.api.models.Usuario;
 import com.barbearia.api.repositories.AgendamentoRepository;
 import com.barbearia.api.repositories.ServicoRepository;
 import com.barbearia.api.repositories.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +37,9 @@ public class AgendamentoService {
     private final UsuarioRepository usuarioRepository;
     private final ServicoRepository servicoRepository;
     private final EmailService emailService;
+
+    @Autowired
+    private AgendamentoRepository agendamentoRepository;
 
     @Scheduled(cron = "0 0 8 * * *")
     public void enviarLembretes() {
@@ -60,6 +66,10 @@ public class AgendamentoService {
 
     public List<Agendamento> listarTodos() {
         return repository.findAll();
+    }
+
+    public Optional<Agendamento> buscarPorId(Long id) {
+        return repository.findById(id);
     }
 
     public List<Agendamento> buscarPorCliente(Long clienteId) {
@@ -138,6 +148,7 @@ public class AgendamentoService {
         }
 
         agendamento.setStatus(StatusAgendamento.AGENDADO);
+        agendamento.setStatusPagamento(StatusPagamento.PENDENTE);
         Agendamento salvo = repository.save(agendamento);
 
         try {
@@ -232,7 +243,7 @@ public class AgendamentoService {
             LocalDateTime inicioSlot = data.atTime(horaAtual);
 
             if (inicioSlot.isBefore(LocalDateTime.now())) {
-                horaAtual = horaAtual.plusMinutes(30);
+                horaAtual = horaAtual.plusMinutes(duracaoServico);
                 continue;
             }
 
@@ -248,7 +259,7 @@ public class AgendamentoService {
                 slots.add(horaAtual.toString().substring(0, 5));
             }
 
-            horaAtual = horaAtual.plusMinutes(30);
+            horaAtual = horaAtual.plusMinutes(duracaoServico);
         }
     }
 
@@ -256,9 +267,9 @@ public class AgendamentoService {
     public Optional<Agendamento> atualizarStatus(Long id, StatusAgendamento novoStatus) {
         return repository.findById(id).map(ag -> {
 
-            if ((ag.getStatus() == StatusAgendamento.CONCLUIDO || ag.getStatus() == StatusAgendamento.CANCELADO)
-                    && novoStatus == StatusAgendamento.AGENDADO) {
-                throw new IllegalArgumentException("Não é possível reverter o status de um agendamento já finalizado.");
+            if (ag.getStatus() == StatusAgendamento.CONCLUIDO || ag.getStatus() == StatusAgendamento.CANCELADO) {
+                throw new IllegalArgumentException(
+                        "Não é possível alterar o status de um agendamento já finalizado ou cancelado.");
             }
 
             ag.setStatus(novoStatus);
@@ -280,6 +291,9 @@ public class AgendamentoService {
         return repository.findById(id).map(ag -> {
             if (ag.getStatus() != StatusAgendamento.CONCLUIDO) {
                 throw new IllegalArgumentException("Apenas serviços concluídos podem ser avaliados.");
+            }
+            if (ag.getNotaAvaliacao() != null) {
+                throw new IllegalArgumentException("Este agendamento já foi avaliado e não pode ser alterado.");
             }
             ag.setNotaAvaliacao(nota);
             ag.setComentarioAvaliacao(comentario);
@@ -450,5 +464,33 @@ public class AgendamentoService {
         } else if (user != null) {
             throw new IllegalArgumentException("O ID fornecido não pertence a um Estabelecimento.");
         }
+    }
+
+    @Transactional
+    public void atualizarStatusPagamento(Long id, StatusPagamento novoStatus) {
+        Agendamento agendamento = repository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Agendamento não encontrado."));
+        agendamento.setStatusPagamento(novoStatus);
+        repository.save(agendamento);
+    }
+
+    public boolean podePagarEmDinheiro(Long clienteId) {
+        long atendimentosFinalizados = agendamentoRepository.countByClienteIdAndStatus(clienteId,
+                StatusAgendamento.CONCLUIDO);
+        return atendimentosFinalizados > 0;
+    }
+
+    @Scheduled(cron = "0 0 * * * *")
+    @Transactional
+    public void limparAgendamentosCancelados() {
+        List<Agendamento> todos = repository.findAll();
+        int removidos = 0;
+        for (Agendamento ag : todos) {
+            if (ag.getStatus() == StatusAgendamento.CANCELADO) {
+                repository.delete(ag);
+                removidos++;
+            }
+        }
+        System.out.println(">>> Sistema de Limpeza: " + removidos + " agendamentos cancelados foram apagados definitivamente.");
     }
 }

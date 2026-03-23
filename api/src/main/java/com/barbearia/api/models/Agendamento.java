@@ -67,4 +67,8 @@ public class Agendamento {
 
     @Column(name = "quem_sugeriu_reagendamento")
     private String quemSugeriuReagendamento;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status_pagamento", nullable = false)
+    private StatusPagamento statusPagamento = StatusPagamento.PENDENTE;
 }

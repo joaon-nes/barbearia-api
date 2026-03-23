@@ -217,7 +217,7 @@
                                 <tr>
                                     <th>Hora</th>
                                     <th>Cliente</th>
-                                    <th>Serviço</th>
+                                    <th>Serviço/Pgto</th>
                                     <th class="text-end">Ação</th>
                                 </tr>
                             </thead>
@@ -669,7 +669,7 @@
                         const novos = agendamentosRefresh.filter(ag => ag.id > ultimoMaxIdAgendamento);
 
                         novos.forEach(novoAg => {
-                            if (novoAg.status === 'AGENDADO') {
+                            if (novoAg.status === 'AGENDADO' || novoAg.status === 'PENDENTE_PAGAMENTO') {
                                 const nomeCliente = novoAg.cliente?.nome.split(' ')[0] || 'Cliente';
                                 const dataIso = novoAg.dataHoraInicio.split('T')[0];
                                 const hora = novoAg.dataHoraInicio.split('T')[1].substring(0, 5);
@@ -719,7 +719,7 @@
                 if (ag.status === 'CONCLUIDO') lucro += ag.servico?.preco || 0;
                 let acoes = ''; let classeRow = '';
 
-                if (ag.status === 'AGENDADO' || (ag.status === 'REAGENDAMENTO_PENDENTE' && ag.quemSugeriuReagendamento === 'ESTABELECIMENTO')) {
+                if (ag.status === 'AGENDADO' || ag.status === 'PENDENTE_PAGAMENTO' || (ag.status === 'REAGENDAMENTO_PENDENTE' && ag.quemSugeriuReagendamento === 'ESTABELECIMENTO')) {
                     acoes = `<button onclick="mudarStatus(${ag.id}, 'CONCLUIDO', '${dataIso}')" class="btn btn-sm btn-success p-1 me-1"><i class="bi bi-check-lg"></i></button> 
                              <button onclick="abrirModalReagendarEst(${ag.id}, '${ag.dataHoraInicio}')" class="btn btn-sm btn-primary p-1 me-1"><i class="bi bi-clock-history"></i></button>
                              <button onclick="mudarStatus(${ag.id}, 'CANCELADO', '${dataIso}')" class="btn btn-sm btn-outline-danger p-1"><i class="bi bi-x-lg"></i></button>`;
@@ -737,7 +737,16 @@
                     acoes = `<span class="badge bg-light text-muted border">Concluído</span>`;
                 }
 
-                let badge = ag.cliente?.contaVerificada ? ' <i class="bi bi-patch-check-fill text-primary"></i>' : '';
+                let badge = ag.cliente?.contaVerificada ? ' <i class="bi bi-patch-check-fill text-primary" title="Verificado"></i>' : '';
+
+                let formPgtoBadge = '';
+                if (ag.formaPagamento === 'DINHEIRO') {
+                    formPgtoBadge = '<span class="badge bg-secondary mt-1" style="font-size: 0.65rem;"><i class="bi bi-cash"></i> Local</span>';
+                } else if (ag.statusPagamento === 'PAGO') {
+                    formPgtoBadge = '<span class="badge bg-success mt-1" style="font-size: 0.65rem;"><i class="bi bi-check-circle"></i> Pago (Online)</span>';
+                } else if (ag.formaPagamento === 'PIX' || ag.formaPagamento === 'CARTAO') {
+                    formPgtoBadge = '<span class="badge bg-warning text-dark mt-1" style="font-size: 0.65rem;"><i class="bi bi-clock"></i> Aguardando Pgto</span>';
+                }
 
                 let dataStrParaCalculo = (ag.status === 'REAGENDAMENTO_PENDENTE' && ag.quemSugeriuReagendamento === 'CLIENTE')
                     ? ag.dataHoraProposta
@@ -751,7 +760,7 @@
                     <tr class="${classeRow}">
                         <td>${infoHora}</td>
                         <td>${ag.cliente?.nome.split(' ')[0]}${badge}</td>
-                        <td>${ag.servico?.nome}</td>
+                        <td>${ag.servico?.nome} <br> ${formPgtoBadge}</td>
                         <td class="text-end" style="min-width: 100px;">${acoes}</td>
                     </tr>`;
 
@@ -800,7 +809,9 @@
             const res = await fetch(`http://localhost:8080/api/agendamentos/estabelecimento/${usuarioAtual.id}`, { headers: getHeaders() });
             const todos = await res.json();
             const minhasAvaliacoes = todos.filter(ag => ag.notaAvaliacao != null).sort((a, b) => {
-                let dateA = a.dataAvaliacao || a.dataHoraInicio; let dateB = b.dataAvaliacao || b.dataHoraInicio; return dateB.localeCompare(dateA);
+                let dataA = new Date(a.dataAvaliacao || a.dataHoraInicio);
+                let dataB = new Date(b.dataAvaliacao || b.dataHoraInicio);
+                return dataB - dataA;
             });
 
             const naoRespondidas = minhasAvaliacoes.filter(ag => !ag.respostaAvaliacao).length;
@@ -823,7 +834,7 @@
                     <div class="card card-custom p-3 mb-3 border-0 shadow-sm">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                             <div><strong class="small">${ag.cliente?.nome.split(' ')[0]}${badgeVerified}</strong> <small class="text-muted ms-1" style="font-size: 0.7rem;">${dAvaliacao}</small></div>
-                            <span class="text-warning small">${'⭐'.repeat(ag.notaAvaliacao)}</span>
+                            <span class="fw-bold small text-dark">${ag.notaAvaliacao} <i class="bi bi-star-fill"></i></span>
                         </div>
                         <p class="small m-0 mt-2">${ag.comentarioAvaliacao}</p>
                         ${areaResposta}

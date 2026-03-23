@@ -2,6 +2,8 @@ package com.barbearia.api.controllers;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -25,8 +27,19 @@ public class AgendamentoController {
     private final ServicoRepository servicoRepository;
     private final UsuarioRepository usuarioRepository;
 
+    @Autowired
+    private com.barbearia.api.services.PagamentoService pagamentoService;
+
     @GetMapping
     public ResponseEntity<List<Agendamento>> listarTodos() {
+        Usuario usuarioLogado = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+        if ("CLIENTE".equals(usuarioLogado.getRole().name())) {
+            return ResponseEntity.ok(service.buscarPorCliente(usuarioLogado.getId()));
+        } else if ("ESTABELECIMENTO".equals(usuarioLogado.getRole().name())) {
+            return ResponseEntity.ok(service.buscarPorEstabelecimento(usuarioLogado.getId()));
+        }
+
         return ResponseEntity.ok(service.listarTodos());
     }
 
@@ -102,9 +115,7 @@ public class AgendamentoController {
         Usuario usuarioLogado = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
         try {
-            Agendamento ag = service.listarTodos().stream()
-                    .filter(a -> a.getId().equals(id))
-                    .findFirst()
+            Agendamento ag = service.buscarPorId(id)
                     .orElseThrow(() -> new IllegalArgumentException("Agendamento não encontrado."));
 
             if (!ag.getCliente().getId().equals(usuarioLogado.getId())
@@ -212,6 +223,27 @@ public class AgendamentoController {
             return ResponseEntity.ok(Map.of("mensagem", "Dia reaberto para novos agendamentos!"));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("erro", "Erro ao reabrir o dia: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{id}/pagar")
+    public ResponseEntity<?> solicitarPagamento(@PathVariable Long id) {
+        Usuario usuarioLogado = (Usuario) org.springframework.security.core.context.SecurityContextHolder.getContext()
+                .getAuthentication().getPrincipal();
+
+        try {
+            Agendamento ag = service.buscarPorId(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Agendamento não encontrado."));
+
+            if (!ag.getCliente().getId().equals(usuarioLogado.getId())) {
+                return ResponseEntity.status(403).body(Map.of("erro", "Acesso negado."));
+            }
+
+            String urlCheckout = pagamentoService.gerarLinkDePagamento(ag);
+            return ResponseEntity.ok(Map.of("checkoutUrl", urlCheckout));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         }
     }
 }
