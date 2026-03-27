@@ -1,4 +1,4 @@
-package com.barbearia.api.security;
+package com.barbearia.api.services;
 
 import com.barbearia.api.models.Usuario;
 import io.jsonwebtoken.Jwts;
@@ -14,7 +14,7 @@ import java.util.Date;
 @Service
 public class JwtService {
 
-    @Value("${jwt.secret}")
+    @Value("${jwt.secret:8f3d9b2a5e7c1f4a6b0d9e8f7a1c3b5d2e4f6a8b0c9d7e5f3a1b2c4d6e8f0a1b}")
     private String secret;
 
     private final long EXPIRATION_TIME = Duration.ofHours(24).toMillis();

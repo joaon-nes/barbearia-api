@@ -36,7 +36,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.POST, "/api/usuarios", "/api/usuarios/login", "/api/usuarios/validar-2fa").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/servicos/estabelecimento/**", "/api/usuarios/estabelecimentos/proximos").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/webhooks/abacatepay").permitAll()
+                .requestMatchers("/api/webhooks/**").permitAll()
                 .anyRequest().authenticated()
             )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

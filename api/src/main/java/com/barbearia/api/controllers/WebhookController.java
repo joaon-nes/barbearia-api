@@ -1,47 +1,113 @@
 package com.barbearia.api.controllers;
 
+import com.barbearia.api.models.StatusAgendamento;
 import com.barbearia.api.models.StatusPagamento;
-import com.barbearia.api.services.AgendamentoService;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.barbearia.api.repositories.AgendamentoRepository;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import java.util.List;
-import java.util.Map;
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 
 @RestController
-@RequestMapping("/api/webhooks/abacatepay")
+@RequestMapping("/api/webhooks")
+@RequiredArgsConstructor
 public class WebhookController {
 
-    @Autowired
-    private AgendamentoService agendamentoService;
+    private final AgendamentoRepository agendamentoRepository;
+    private final ObjectMapper mapper = new ObjectMapper();
 
-    @PostMapping
-    public ResponseEntity<Void> receberNotificacao(@RequestBody Map<String, Object> payload) {
-        System.out.println(">>> Webhook AbacatePay recebido!");
+    @Value("${abacatepay.webhook.secret}")
+    private String webhookSecret;
+
+    @PostMapping("/abacatepay")
+    public ResponseEntity<?> receberWebhook(HttpServletRequest request) {
 
         try {
-            String event = (String) payload.get("event");
+            byte[] rawPayload = request.getInputStream().readAllBytes();
 
-            if ("billing.paid".equalsIgnoreCase(event)) {
-                Map<String, Object> data = (Map<String, Object>) payload.get("data");
-                Map<String, Object> billing = (Map<String, Object>) data.get("billing");
-                List<Map<String, Object>> products = (List<Map<String, Object>>) billing.get("products");
+            String signature = request.getHeader("X-Webhook-Signature");
+            if (signature == null)
+                signature = request.getHeader("x-webhook-signature");
 
-                if (products != null && !products.isEmpty()) {
-                    String externalId = (String) products.get(0).get("externalId");
+            String headerSecret = request.getHeader("X-Webhook-Secret");
+            if (headerSecret == null)
+                headerSecret = request.getHeader("x-webhook-secret");
 
-                    if (externalId != null && externalId.startsWith("ag_")) {
-                        Long id = Long.parseLong(externalId.split("_")[1]);
-                        agendamentoService.atualizarStatusPagamento(id, StatusPagamento.PAGO);
-                        System.out.println(">>> SUCESSO! Pagamento atualizado na BD para o Agendamento ID: " + id);
-                    }
+            boolean mathValida = isAssinaturaValida(rawPayload, signature, webhookSecret);
+            boolean segredoValido = webhookSecret.equals(headerSecret);
+
+            if (!mathValida && !segredoValido) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Acesso negado");
+            }
+
+            JsonNode rootNode = mapper.readTree(rawPayload);
+            JsonNode billingNode = rootNode.path("data").path("billing");
+            String statusTransacao = billingNode.path("status").asText();
+
+            String externalId = null;
+            JsonNode products = billingNode.path("products");
+            if (products != null && products.isArray() && products.size() > 0) {
+                externalId = products.get(0).path("externalId").asText();
+            }
+
+            if (externalId != null && externalId.startsWith("ag_")) {
+                Long agendamentoId = Long.parseLong(externalId.replace("ag_", ""));
+
+                if ("PAID".equalsIgnoreCase(statusTransacao)) {
+                    agendamentoRepository.findById(agendamentoId).ifPresent(ag -> {
+                        ag.setStatusPagamento(StatusPagamento.PAGO);
+                        ag.setStatus(StatusAgendamento.AGENDADO);
+                        agendamentoRepository.save(ag);
+                    });
+                } else if ("CANCELLED".equalsIgnoreCase(statusTransacao) || "EXPIRED".equalsIgnoreCase(statusTransacao)
+                        || "FAILED".equalsIgnoreCase(statusTransacao)) {
+                    agendamentoRepository.findById(agendamentoId).ifPresent(ag -> {
+                        ag.setStatusPagamento(StatusPagamento.CANCELADO);
+                        ag.setStatus(StatusAgendamento.CANCELADO);
+                        agendamentoRepository.save(ag);
+                    });
+                } else {
+                    System.out.println("Status: " + statusTransacao + ". Aguardando...");
                 }
+            } else {
+                System.out.println("ID do Agendamento não encontrado.");
+            }
+
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            System.err.println("Erro interno: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    private boolean isAssinaturaValida(byte[] payload, String headerSignature, String secret) {
+        if (headerSignature == null || secret == null)
+            return false;
+        try {
+            Mac hmacSha256 = Mac.getInstance("HmacSHA256");
+            SecretKeySpec secretKey = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+            hmacSha256.init(secretKey);
+
+            byte[] hash = hmacSha256.doFinal(payload);
+            String calculada = Base64.getEncoder().encodeToString(hash);
+
+            if (calculada.equals(headerSignature)) {
+                return true;
+            } else {
+                System.out.println("-> Criptografia calculada não coincidiu.");
+                return false;
             }
         } catch (Exception e) {
-            System.err.println(">>> Erro ao processar webhook: " + e.getMessage());
+            return false;
         }
-
-        // Retorna sempre 200 OK para o AbacatePay saber que recebemos
-        return ResponseEntity.ok().build();
     }
 }

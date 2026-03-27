@@ -151,9 +151,13 @@
             };
 
             try {
+                const token = localStorage.getItem('token');
                 const response = await fetch(`http://localhost:8080/api/usuarios/${usuarioAtual.id}/completar-perfil`, {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': token ? `Bearer ${token}` : ''
+                    },
                     body: JSON.stringify(dadosCompletos)
                 });
 
@@ -163,7 +167,9 @@
                     alert("Perfil configurado com sucesso!");
                     window.location.href = 'estabelecimento.html';
                 }
-            } catch (error) { alert("Erro ao salvar perfil."); }
+            } catch (error) {
+                alert("Erro ao salvar perfil.");
+            }
         });
     </script>
 </body>

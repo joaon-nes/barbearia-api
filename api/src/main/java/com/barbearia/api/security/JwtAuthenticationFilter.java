@@ -2,6 +2,8 @@ package com.barbearia.api.security;
 
 import com.barbearia.api.models.Usuario;
 import com.barbearia.api.repositories.UsuarioRepository;
+import com.barbearia.api.services.JwtService;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

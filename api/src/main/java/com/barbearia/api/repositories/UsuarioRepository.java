@@ -6,8 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Optional;
+import java.util.List;
 
 @Repository
 public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
@@ -16,18 +16,6 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
         boolean existsByTelefone(String telefone);
 
-        @Query(value = "SELECT u.id, u.ativo, u.codigo2fa, u.codigo_verificacao, u.data_expiracao_2fa, u.email, u.foto_perfil, u.nome, u.role, u.senha, u.telefone, u.dias_fechados, "
-                        +
-                        "e.bairro, e.cep, e.cidade, e.cnpj, e.comodidades, e.estado, e.fotos_galeria, e.horarios_funcionamento, "
-                        +
-                        "e.latitude, e.link_facebook, e.link_instagram, e.link_tiktok, e.longitude, e.nome_barbearia, e.numero, e.perfil_completo, e.rua, e.tags "
-                        +
-                        "FROM usuarios u INNER JOIN estabelecimentos e ON u.id = e.id " +
-                        "WHERE (6371 * acos(cos(radians(:lat)) * cos(radians(e.latitude)) * cos(radians(e.longitude) - radians(:lng)) + sin(radians(:lat)) * sin(radians(e.latitude)))) <= :raioKm "
-                        +
-                        "AND u.ativo = true", nativeQuery = true)
-        List<Estabelecimento> buscarEstabelecimentosProximos(
-                        @org.springframework.data.repository.query.Param("lat") double lat,
-                        @org.springframework.data.repository.query.Param("lng") double lng,
-                        @org.springframework.data.repository.query.Param("raioKm") double raioKm);
+        @Query("SELECT DISTINCT e FROM Estabelecimento e WHERE e.ativo = true AND e.latitude IS NOT NULL AND e.longitude IS NOT NULL")
+        List<Estabelecimento> buscarEstabelecimentosAtivos();
 }

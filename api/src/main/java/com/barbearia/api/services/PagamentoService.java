@@ -16,10 +16,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 @Service
 public class PagamentoService {
 
-    @Value("${abacatepay.api.key}")
+    @Value("${abacatepay.api.key:abc_dev_qmkr1XdEqXqF1rr6XsSR0K6H}")
     private String apiKey;
 
-    @Value("${app.frontend.url}")
+    @Value("${app.frontend.url:http://127.0.0.1:5500/api/src/main/resources/statics/cliente.html}")
     private String urlFrontend;
 
     public String gerarLinkDePagamento(Agendamento agendamento) {
@@ -55,7 +55,17 @@ public class PagamentoService {
                     telefoneCliente = "11999999999";
             }
 
-            String cpfCliente = "00000000000";
+            String cpfCliente = agendamento.getCliente().getCpf();
+
+            if (cpfCliente == null || cpfCliente.isBlank()) {
+                cpfCliente = "11144477735";
+            } else {
+                cpfCliente = cpfCliente.replaceAll("\\D", "");
+
+                if (cpfCliente.length() != 11 && cpfCliente.length() != 14) {
+                    cpfCliente = "11144477735";
+                }
+            }
 
             payload.put("customer", Map.of(
                     "name", agendamento.getCliente().getNome(),
@@ -66,7 +76,9 @@ public class PagamentoService {
             ObjectMapper mapper = new ObjectMapper();
             String jsonBody = mapper.writeValueAsString(payload);
 
-            HttpClient client = HttpClient.newHttpClient();
+            HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(java.time.Duration.ofSeconds(10))
+                    .build();
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("https://api.abacatepay.com/v1/billing/create"))
                     .header("Authorization", "Bearer " + apiKey)

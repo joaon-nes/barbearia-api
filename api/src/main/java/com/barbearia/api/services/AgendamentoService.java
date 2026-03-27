@@ -8,11 +8,11 @@ import com.barbearia.api.models.StatusAgendamento;
 import com.barbearia.api.models.StatusPagamento;
 import com.barbearia.api.models.Usuario;
 import com.barbearia.api.repositories.AgendamentoRepository;
+import com.barbearia.api.repositories.BarbeiroRepository;
 import com.barbearia.api.repositories.ServicoRepository;
 import com.barbearia.api.repositories.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +22,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -37,9 +38,7 @@ public class AgendamentoService {
     private final UsuarioRepository usuarioRepository;
     private final ServicoRepository servicoRepository;
     private final EmailService emailService;
-
-    @Autowired
-    private AgendamentoRepository agendamentoRepository;
+    private final BarbeiroRepository barbeiroRepository;
 
     @Scheduled(cron = "0 0 8 * * *")
     public void enviarLembretes() {
@@ -82,7 +81,7 @@ public class AgendamentoService {
 
     @Transactional
     public Agendamento criar(Agendamento agendamento) {
-        if (agendamento.getDataHoraInicio().isBefore(LocalDateTime.now())) {
+        if (agendamento.getDataHoraInicio().isBefore(LocalDateTime.now(ZoneId.of("America/Sao_Paulo")))) {
             throw new IllegalArgumentException("Não é possível agendar um horário no passado.");
         }
 
@@ -103,8 +102,8 @@ public class AgendamentoService {
             String msgExtra = limitePermitido == 1
                     ? " Após comparecer ao seu primeiro corte, o seu limite aumentará para 3."
                     : "";
-            throw new IllegalArgumentException("Bloqueio de Segurança: Já possui " + agendamentosAtivos +
-                    " agendamento(s) ativo(s). Conclua-os ou cancele-os antes de marcar um novo." + msgExtra);
+            throw new IllegalArgumentException("Já possui " + agendamentosAtivos +
+                    " agendamentos ativos. Conclua-os ou cancele-os antes de marcar um novo." + msgExtra);
         }
 
         Usuario usuarioEstabelecimento = usuarioRepository.findById(agendamento.getEstabelecimento().getId())
@@ -124,9 +123,16 @@ public class AgendamentoService {
             }
         }
 
+        if (agendamento.getBarbeiro() == null || agendamento.getBarbeiro().getId() == null) {
+            throw new IllegalArgumentException("É obrigatório selecionar um barbeiro.");
+        }
+        com.barbearia.api.models.Barbeiro barbeiro = barbeiroRepository.findById(agendamento.getBarbeiro().getId())
+                .orElseThrow(() -> new IllegalArgumentException("Barbeiro não encontrado."));
+
         agendamento.setServico(servico);
         agendamento.setCliente(cliente);
         agendamento.setEstabelecimento(estabelecimento);
+        agendamento.setBarbeiro(barbeiro);
 
         LocalDateTime inicioNovo = agendamento.getDataHoraInicio();
         LocalDateTime fimNovo = inicioNovo.plusMinutes(servico.getDuracaoMinutos());
@@ -134,8 +140,8 @@ public class AgendamentoService {
         LocalDateTime inicioDia = inicioNovo.toLocalDate().atStartOfDay();
         LocalDateTime fimDia = inicioDia.plusDays(1).minusNanos(1);
 
-        List<Agendamento> agendamentosDoDia = repository.buscarAtivosPorEstabelecimentoEDia(
-                estabelecimento.getId(), inicioDia, fimDia, StatusAgendamento.CANCELADO);
+        List<Agendamento> agendamentosDoDia = repository.buscarAtivosPorBarbeiroEDia(
+                agendamento.getBarbeiro().getId(), inicioDia, fimDia);
 
         for (Agendamento existente : agendamentosDoDia) {
             LocalDateTime inicioExistente = existente.getDataHoraInicio();
@@ -143,7 +149,7 @@ public class AgendamentoService {
 
             if (inicioNovo.isBefore(fimExistente) && fimNovo.isAfter(inicioExistente)) {
                 throw new IllegalArgumentException(
-                        "Horário indisponível. Este espaço já está ocupado por outro cliente.");
+                        "Horário indisponível. Este profissional já tem marcação nesta hora.");
             }
         }
 
@@ -159,8 +165,9 @@ public class AgendamentoService {
 
             String assuntoCliente = "Confirmação de Agendamento - " + estabelecimento.getNomeBarbearia();
             String mensagemCliente = String.format(
-                    "Olá %s,\n\nO seu agendamento foi confirmado com sucesso!\n\nDetalhes:\n📍 Barbearia: %s\n✂️ Serviço: %s\n📅 Data: %s\n⏰ Hora: %s\n\nAgradecemos a preferência!",
-                    cliente.getNome().split(" ")[0], estabelecimento.getNomeBarbearia(), servico.getNome(), dataPt,
+                    "Olá %s,\n\nO seu agendamento foi confirmado com sucesso!\n\nDetalhes:\n📍 Barbearia: %s\n👨‍🦱 Profissional: %s\n✂️ Serviço: %s\n📅 Data: %s\n⏰ Hora: %s\n\nAgradecemos a preferência!",
+                    cliente.getNome().split(" ")[0], estabelecimento.getNomeBarbearia(), barbeiro.getNome(),
+                    servico.getNome(), dataPt,
                     horaFormatada);
             emailService.enviarEmail(cliente.getEmail(), assuntoCliente, mensagemCliente);
 
@@ -169,8 +176,8 @@ public class AgendamentoService {
             String assuntoEst = "Novo Agendamento: " + cliente.getNome().split(" ")[0] + " - " + dataPt + " às "
                     + horaFormatada;
             String mensagemEst = String.format(
-                    "Olá %s,\n\nVocê acabou de receber uma nova marcação!\n\n👤 Cliente: %s\n✂️ Serviço: %s\n📅 Data: %s\n⏰ Hora: %s",
-                    nomeBarbearia, cliente.getNome(), servico.getNome(), dataPt, horaFormatada);
+                    "Olá %s,\n\nVocê tem um novo agendamento!\n\n👤 Cliente: %s\n👨‍🦱 Profissional: %s\n✂️ Serviço: %s\n📅 Data: %s\n⏰ Hora: %s",
+                    nomeBarbearia, cliente.getNome(), barbeiro.getNome(), servico.getNome(), dataPt, horaFormatada);
             emailService.enviarEmail(estabelecimento.getEmail(), assuntoEst, mensagemEst);
 
         } catch (Exception e) {
@@ -180,7 +187,8 @@ public class AgendamentoService {
         return salvo;
     }
 
-    public List<String> buscarHorariosDisponiveis(Long estabelecimentoId, Long servicoId, java.time.LocalDate data) {
+    public List<String> buscarHorariosDisponiveis(Long estabelecimentoId, Long servicoId, java.time.LocalDate data,
+            Long barbeiroId) {
         Usuario user = usuarioRepository.findById(estabelecimentoId).orElseThrow();
         if (!(user instanceof Estabelecimento))
             return Collections.emptyList();
@@ -193,10 +201,8 @@ public class AgendamentoService {
 
         Servico servico = servicoRepository.findById(servicoId).orElseThrow();
         int duracao = servico.getDuracaoMinutos();
-
         String[] nomesDias = { "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo" };
         String diaDaSemana = nomesDias[data.getDayOfWeek().getValue() - 1];
-
         String hrJson = est.getHorariosFuncionamento();
         if (hrJson == null || hrJson.isBlank())
             return Collections.emptyList();
@@ -208,16 +214,14 @@ public class AgendamentoService {
             List<Map<String, String>> horariosDaSemana = mapper.readValue(hrJson,
                     new TypeReference<List<Map<String, String>>>() {
                     });
-
             Map<String, String> configDia = horariosDaSemana.stream()
-                    .filter(h -> diaDaSemana.equalsIgnoreCase(h.get("dia")))
-                    .findFirst().orElse(null);
+                    .filter(h -> diaDaSemana.equalsIgnoreCase(h.get("dia"))).findFirst().orElse(null);
 
             if (configDia == null)
                 return Collections.emptyList();
 
-            List<Agendamento> ocupados = repository.buscarAtivosPorEstabelecimentoEDia(
-                    estabelecimentoId, data.atStartOfDay(), data.atTime(23, 59, 59), StatusAgendamento.CANCELADO);
+            List<Agendamento> ocupados = repository.buscarAtivosPorBarbeiroEDia(
+                    barbeiroId, data.atStartOfDay(), data.atTime(23, 59, 59));
 
             gerarSlotsNoTurno(data, configDia.get("abertura1"), configDia.get("fechamento1"), duracao, ocupados,
                     slotsDisponiveis);
@@ -264,8 +268,12 @@ public class AgendamentoService {
     }
 
     @Transactional
-    public Optional<Agendamento> atualizarStatus(Long id, StatusAgendamento novoStatus) {
+    public Optional<Agendamento> atualizarStatus(Long id, StatusAgendamento novoStatus, Long usuarioLogadoId) {
         return repository.findById(id).map(ag -> {
+            if (!ag.getEstabelecimento().getId().equals(usuarioLogadoId)) {
+                throw new SecurityException(
+                        "Operação não permitida. Este agendamento pertence a outro estabelecimento.");
+            }
 
             if (ag.getStatus() == StatusAgendamento.CONCLUIDO || ag.getStatus() == StatusAgendamento.CANCELADO) {
                 throw new IllegalArgumentException(
@@ -298,13 +306,31 @@ public class AgendamentoService {
             ag.setNotaAvaliacao(nota);
             ag.setComentarioAvaliacao(comentario);
             ag.setDataAvaliacao(LocalDateTime.now());
-            return repository.save(ag);
+            Agendamento salvo = repository.save(ag);
+
+            Estabelecimento est = (Estabelecimento) ag.getEstabelecimento();
+            List<Agendamento> agsAvaliados = repository.findByEstabelecimentoId(est.getId()).stream()
+                    .filter(a -> a.getNotaAvaliacao() != null)
+                    .toList();
+
+            double soma = agsAvaliados.stream().mapToInt(Agendamento::getNotaAvaliacao).sum();
+            int total = agsAvaliados.size();
+
+            est.setTotalAvaliacoes(total);
+            est.setNotaMedia(total > 0 ? soma / total : 0.0);
+            usuarioRepository.save(est);
+
+            return salvo;
         });
     }
 
     @Transactional
-    public Optional<Agendamento> responderAvaliacao(Long id, String resposta) {
+    public Optional<Agendamento> responderAvaliacao(Long id, String resposta, Long usuarioLogadoId) {
         return repository.findById(id).map(ag -> {
+            if (!ag.getEstabelecimento().getId().equals(usuarioLogadoId)) {
+                throw new SecurityException("Operação não permitida.");
+            }
+
             ag.setRespostaAvaliacao(resposta);
             ag.setDataResposta(LocalDateTime.now());
             return repository.save(ag);
@@ -327,8 +353,8 @@ public class AgendamentoService {
             LocalDateTime inicioDia = novaDataHora.toLocalDate().atStartOfDay();
             LocalDateTime fimDia = inicioDia.plusDays(1).minusNanos(1);
 
-            List<Agendamento> agendamentosDoDia = repository.buscarAtivosPorEstabelecimentoEDia(
-                    agendamento.getEstabelecimento().getId(), inicioDia, fimDia, StatusAgendamento.CANCELADO);
+            List<Agendamento> agendamentosDoDia = repository.buscarAtivosPorBarbeiroEDia(
+                    agendamento.getBarbeiro().getId(), inicioDia, fimDia);
 
             for (Agendamento existente : agendamentosDoDia) {
                 if (existente.getId().equals(agendamento.getId()))
@@ -358,8 +384,8 @@ public class AgendamentoService {
             LocalDateTime inicioDia = novaDataHora.toLocalDate().atStartOfDay();
             LocalDateTime fimDia = inicioDia.plusDays(1).minusNanos(1);
 
-            List<Agendamento> agendamentosDoDia = repository.buscarAtivosPorEstabelecimentoEDia(
-                    agendamento.getEstabelecimento().getId(), inicioDia, fimDia, StatusAgendamento.CANCELADO);
+            List<Agendamento> agendamentosDoDia = repository.buscarAtivosPorBarbeiroEDia(
+                    agendamento.getBarbeiro().getId(), inicioDia, fimDia);
 
             for (Agendamento existente : agendamentosDoDia) {
                 if (existente.getId() != null && existente.getId().equals(agendamento.getId()))
@@ -394,7 +420,29 @@ public class AgendamentoService {
     public Optional<Agendamento> confirmarReagendamento(Long id) {
         return repository.findById(id).map(agendamento -> {
             if (agendamento.getDataHoraProposta() != null) {
-                agendamento.setDataHoraInicio(agendamento.getDataHoraProposta());
+                LocalDateTime novaDataHora = agendamento.getDataHoraProposta();
+                LocalDateTime fimNovo = novaDataHora.plusMinutes(agendamento.getServico().getDuracaoMinutos());
+                LocalDateTime inicioDia = novaDataHora.toLocalDate().atStartOfDay();
+                LocalDateTime fimDia = inicioDia.plusDays(1).minusNanos(1);
+
+                List<Agendamento> agendamentosDoDia = repository.buscarAtivosPorBarbeiroEDia(
+                        agendamento.getBarbeiro().getId(), inicioDia, fimDia);
+
+                for (Agendamento existente : agendamentosDoDia) {
+                    if (existente.getId().equals(agendamento.getId()))
+                        continue;
+
+                    LocalDateTime inicioExistente = existente.getDataHoraInicio();
+                    LocalDateTime fimExistente = inicioExistente
+                            .plusMinutes(existente.getServico().getDuracaoMinutos());
+
+                    if (novaDataHora.isBefore(fimExistente) && fimNovo.isAfter(inicioExistente)) {
+                        throw new IllegalArgumentException(
+                                "O horário sugerido já foi ocupado por outro cliente neste meio tempo. Inicie um novo reagendamento.");
+                    }
+                }
+
+                agendamento.setDataHoraInicio(novaDataHora);
                 agendamento.setDataHoraProposta(null);
                 agendamento.setQuemSugeriuReagendamento(null);
                 agendamento.setStatus(StatusAgendamento.AGENDADO);
@@ -409,10 +457,14 @@ public class AgendamentoService {
         LocalDateTime fimDia = inicioDia.plusDays(1).minusNanos(1);
 
         List<Agendamento> agendamentos = repository.buscarAtivosPorEstabelecimentoEDia(estabelecimentoId, inicioDia,
-                fimDia, StatusAgendamento.CANCELADO);
+                fimDia);
         int cancelados = 0;
 
         for (Agendamento ag : agendamentos) {
+            if (ag.getStatus() == StatusAgendamento.CONCLUIDO) {
+                continue;
+            }
+
             ag.setStatus(StatusAgendamento.CANCELADO);
             repository.save(ag);
             cancelados++;
@@ -443,8 +495,6 @@ public class AgendamentoService {
                 est.setDiasFechados(dias + "," + dataStr);
             }
             usuarioRepository.save(est);
-        } else if (user != null) {
-            throw new IllegalArgumentException("O ID fornecido não pertence a um Estabelecimento.");
         }
 
         return cancelados;
@@ -475,22 +525,38 @@ public class AgendamentoService {
     }
 
     public boolean podePagarEmDinheiro(Long clienteId) {
-        long atendimentosFinalizados = agendamentoRepository.countByClienteIdAndStatus(clienteId,
+        long atendimentosFinalizados = repository.countByClienteIdAndStatus(clienteId,
                 StatusAgendamento.CONCLUIDO);
         return atendimentosFinalizados > 0;
     }
 
-    @Scheduled(cron = "0 0 * * * *")
     @Transactional
-    public void limparAgendamentosCancelados() {
-        List<Agendamento> todos = repository.findAll();
-        int removidos = 0;
-        for (Agendamento ag : todos) {
-            if (ag.getStatus() == StatusAgendamento.CANCELADO) {
-                repository.delete(ag);
-                removidos++;
+    public Agendamento avaliarCliente(Long id, Map<String, Object> payload) {
+        Agendamento ag = repository.findById(id).orElseThrow(() -> new RuntimeException("Agendamento não encontrado"));
+
+        if (payload.containsKey("notaCliente") && payload.get("notaCliente") != null) {
+            Integer nota = Integer.parseInt(payload.get("notaCliente").toString());
+            ag.setNotaCliente(nota);
+            ag = repository.save(ag);
+
+            Usuario cliente = ag.getCliente();
+            if (cliente != null) {
+                List<Agendamento> historicoCliente = repository.findByClienteId(cliente.getId());
+                double soma = 0;
+                int cont = 0;
+                for (Agendamento a : historicoCliente) {
+                    if (a.getNotaCliente() != null) {
+                        soma += a.getNotaCliente();
+                        cont++;
+                    }
+                }
+
+                cliente.setTotalAvaliacoes(cont);
+                cliente.setNotaMedia(cont > 0 ? soma / cont : 0.0);
+                usuarioRepository.save(cliente);
             }
         }
-        System.out.println(">>> Sistema de Limpeza: " + removidos + " agendamentos cancelados foram apagados definitivamente.");
+
+        return ag;
     }
 }

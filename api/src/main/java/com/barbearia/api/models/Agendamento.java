@@ -71,4 +71,14 @@ public class Agendamento {
     @Enumerated(EnumType.STRING)
     @Column(name = "status_pagamento", nullable = false)
     private StatusPagamento statusPagamento = StatusPagamento.PENDENTE;
+
+    @Column(name = "forma_pagamento")
+    private String formaPagamento;
+
+    @ManyToOne
+    @JoinColumn(name = "barbeiro_id", nullable = true)
+    private Barbeiro barbeiro;
+
+    @Column(name = "nota_cliente")
+    private Integer notaCliente;
 }

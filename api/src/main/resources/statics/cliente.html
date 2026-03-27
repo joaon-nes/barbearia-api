@@ -10,56 +10,442 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        ::-webkit-scrollbar { display: none; }
-        * { scrollbar-width: none; -ms-overflow-style: none; }
-        body { background-color: #F8F6F0; color: #333333; padding-bottom: 80px; overflow-x: hidden; }
-        .app-container { max-width: 480px; margin: 0 auto; min-height: 100vh; position: relative; }
-        .navbar-custom { background-color: #2C4E80; color: #ffffff; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; padding: 15px 20px; }
-        .card-custom { background: white; border-radius: 15px; border: 1px solid #e0dcd3; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05); }
-        .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background-color: #ffffff; border-top-left-radius: 20px; border-top-right-radius: 20px; display: flex; justify-content: space-around; padding: 10px 0; z-index: 1000; box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05); }
-        .nav-item { text-align: center; color: #aaa; text-decoration: none; font-size: 0.75rem; display: flex; flex-direction: column; align-items: center; cursor: pointer; transition: 0.3s; flex: 1; }
-        .nav-item.active { color: #2C4E80; font-weight: bold; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.3s; }
-        
-        .ticket-card { background: white; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); border: 1px solid #e0dcd3; position: relative; overflow: hidden; transition: transform 0.2s; }
-        .ticket-card:active { transform: scale(0.98); }
-        .ticket-indicator { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; }
-        
-        #view-barbearia { display: none; position: absolute; top: 0; left: 0; width: 100%; min-height: 100vh; background: #F8F6F0; z-index: 1040; animation: slideIn 0.3s; }
-        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
-        .capa { height: 220px; background: #2C4E80; background-size: cover; background-position: center; border-bottom-left-radius: 30px; border-bottom-right-radius: 30px; position: relative; }
-        .btn-back { position: absolute; top: 15px; left: 15px; background: white; border-radius: 50%; width: 40px; height: 40px; border: none; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); z-index: 10; }
-        .time-badge { padding: 8px 12px; border-radius: 10px; border: 1px solid #2C4E80; color: #2C4E80; font-weight: bold; cursor: pointer; }
-        .time-badge.active { background: #2C4E80; color: white; }
-        .time-badge.disabled { background: #eee; color: #ccc; border-color: #eee; text-decoration: line-through; cursor: not-allowed; pointer-events: none; }
-        .date-card { min-width: 65px; border: 1px solid #ddd; border-radius: 12px; padding: 8px; text-align: center; cursor: pointer; }
-        .date-card.active { background: #2C4E80; color: white; }
-        .comodidade-badge { border: 1px solid #ddd; font-size: 0.8rem; padding: 5px 10px; border-radius: 20px; display: flex; align-items: center; gap: 5px; color: #555; }
-        .star-rating i { font-size: 1.5rem; color: #ddd; cursor: pointer; }
-        .star-rating i.active { color: #ffc107; }
-        .social-icon { font-size: 1.2rem; text-decoration: none; transition: 0.2s; display: inline-flex; align-items: center; justify-content: center; width: 35px; height: 35px; border-radius: 50%; }
-        .social-insta { color: #E1306C; background: #ffe4ec; } .social-insta:hover { background: #E1306C; color: white; }
-        .social-fb { color: #1877F2; background: #e7f0fd; } .social-fb:hover { background: #1877F2; color: white; }
-        .social-tk { color: #111111; background: #e6e6e6; } .social-tk:hover { background: #111111; color: white; }
-        #modalImagemAmpliada { z-index: 1065 !important; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        #btnVoltarTopo { position: fixed; bottom: -60px; right: 20px; z-index: 1050; border: none; outline: none; background-color: #2C4E80; color: white; cursor: pointer; padding: 0; border-radius: 50%; font-size: 1.2rem; width: 38px; height: 38px; box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3); display: flex; align-items: center; justify-content: center; transition: bottom 0.3s ease-in-out, transform 0.2s; }
-        #btnVoltarTopo.mostrar { bottom: 72px; }
-        #btnVoltarTopo:active { transform: scale(0.9); background-color: #1a3052; }
-        @media (min-width: 480px) { #btnVoltarTopo { right: calc(50% - 220px); } }
+        ::-webkit-scrollbar {
+            display: none;
+        }
+
+        * {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        body {
+            background-color: #F8F6F0;
+            color: #333333;
+            padding-bottom: 80px;
+            overflow-x: hidden;
+        }
+
+        .app-container {
+            max-width: 480px;
+            margin: 0 auto;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        .navbar-custom {
+            background-color: #2C4E80 !important;
+            color: #ffffff;
+            border-bottom-left-radius: 20px;
+            border-bottom-right-radius: 20px;
+            padding: 15px 20px;
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 480px;
+            z-index: 1030;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .card-custom {
+            background: white;
+            border-radius: 15px;
+            border: 1px solid #e0dcd3;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 480px;
+            background-color: #ffffff;
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            display: flex;
+            justify-content: space-around;
+            padding: 10px 0;
+            z-index: 1000;
+            box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-item {
+            text-align: center;
+            color: #aaa;
+            text-decoration: none;
+            font-size: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            transition: 0.3s;
+            flex: 1;
+        }
+
+        .nav-item.active {
+            color: #2C4E80 !important;
+            font-weight: bold;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        .ticket-card {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e0dcd3;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s;
+        }
+
+        .ticket-card:active {
+            transform: scale(0.98);
+        }
+
+        .ticket-indicator {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 6px;
+        }
+
+        #view-barbearia {
+            display: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            min-height: 100vh;
+            background: #F8F6F0;
+            z-index: 1040;
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+            }
+
+            to {
+                transform: translateX(0);
+            }
+        }
+
+        .capa {
+            height: 220px;
+            background: #2C4E80;
+            background-size: cover;
+            background-position: center;
+            border-bottom-left-radius: 30px;
+            border-bottom-right-radius: 30px;
+            position: relative;
+            background: #111827;
+        }
+
+        .btn-back {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            border: none;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+        }
+
+        .time-badge {
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #d1d5db;
+            color: #374151;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .time-badge.active {
+            background: #111827 !important;
+            color: white !important;
+            border-color: #111827 !important;
+        }
+
+        .time-badge.disabled {
+            background: #eee;
+            color: #ccc;
+            border-color: #eee;
+            text-decoration: line-through;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .date-card {
+            min-width: 65px;
+            border: 1px solid #ddd;
+            border-radius: 12px;
+            padding: 8px;
+            text-align: center;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .date-card.active {
+            background: #111827 !important;
+            color: white;
+            border-color: #111827 !important;
+        }
+
+        .comodidade-badge {
+            border: 1px solid #ddd;
+            font-size: 0.8rem;
+            padding: 5px 10px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #555;
+        }
+
+        .star-rating i {
+            font-size: 1.5rem;
+            color: #ddd;
+            cursor: pointer;
+        }
+
+        .star-rating i.active {
+            color: #ffc107;
+        }
+
+        .social-icon {
+            font-size: 1.2rem;
+            text-decoration: none;
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+        }
+
+        .social-insta {
+            color: #E1306C;
+            background: #ffe4ec;
+        }
+
+        .social-insta:hover {
+            background: #E1306C;
+            color: white;
+        }
+
+        .social-fb {
+            color: #1877F2;
+            background: #e7f0fd;
+        }
+
+        .social-fb:hover {
+            background: #1877F2;
+            color: white;
+        }
+
+        .social-tk {
+            color: #111111;
+            background: #e6e6e6;
+        }
+
+        .social-tk:hover {
+            background: #111111;
+            color: white;
+        }
+
+        #modalImagemAmpliada {
+            z-index: 1065 !important;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        #btnVoltarTopo {
+            position: fixed;
+            bottom: -60px;
+            right: 20px;
+            z-index: 1050;
+            border: none;
+            outline: none;
+            background-color: #111827;
+            color: white;
+            cursor: pointer;
+            padding: 0;
+            border-radius: 50%;
+            font-size: 1.2rem;
+            width: 38px;
+            height: 38px;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: bottom 0.3s ease-in-out, transform 0.2s;
+        }
+
+        #btnVoltarTopo.mostrar {
+            bottom: 72px;
+        }
+
+        #btnVoltarTopo:active {
+            transform: scale(0.9);
+            background-color: #000000;
+        }
+
+        @media (min-width: 480px) {
+            #btnVoltarTopo {
+                right: calc(50% - 220px);
+            }
+        }
+
+        .btn-black {
+            background-color: #111827 !important;
+            color: #ffffff !important;
+            border-radius: 6px !important;
+            padding: 10px 20px !important;
+            border: none !important;
+            font-weight: bold !important;
+            font-size: 0.85rem !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+            transition: 0.2s;
+        }
+
+        .btn-black:hover {
+            background-color: #000000 !important;
+            color: white !important;
+        }
+
+        .btn-black:disabled {
+            background-color: #374151 !important;
+            opacity: 0.7;
+        }
+
+        .btn-gray {
+            background-color: #e5e7eb !important;
+            color: #374151 !important;
+            border-radius: 6px !important;
+            padding: 10px 20px !important;
+            border: none !important;
+            font-weight: bold !important;
+            font-size: 0.85rem !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+            transition: 0.2s;
+        }
+
+        .btn-gray:hover {
+            background-color: #d1d5db !important;
+            color: #111827 !important;
+        }
+
+        .text-primary-custom {
+            color: #111827 !important;
+        }
+
+        .agenda-container-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+        }
+
+        .nav-scroll-btn {
+            flex-shrink: 0;
+            width: 36px;
+            height: 36px;
+            background: #e5e7eb;
+            border: none;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #111827;
+            transition: 0.2s;
+        }
+
+        .nav-scroll-btn:hover {
+            background: #111827;
+            color: white;
+        }
+
+        .btn-left {
+            left: -5px;
+        }
+
+        .btn-right {
+            right: -5px;
+        }
+
+        @media (max-width: 480px) {
+            .nav-scroll-btn {
+                display: none;
+            }
+        }
+
+        #modalDatas {
+            flex-grow: 1;
+            display: flex;
+            overflow-x: auto;
+            gap: 10px;
+            padding: 5px 0;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+        }
     </style>
 </head>
 
 <body>
     <div class="app-container">
         <div id="main-view">
-            <div class="navbar-custom d-flex justify-content-between align-items-center mb-4">
-                <h5 class="m-0 fw-bold">💈 Barber Discover</h5>
+            <div class="navbar-custom d-flex justify-content-between align-items-center">
+                <h5 class="m-0 fw-bold">💈 Barber Discovery</h5>
                 <div id="headerAuth"></div>
             </div>
-            <div class="container px-3">
+            <div class="container px-3" style="padding-top: 85px;">
                 <div id="tab-descubra" class="tab-content active">
+                    <div class="card card-custom p-3 mb-4 border-0 shadow-sm d-flex flex-row justify-content-between align-items-center"
+                        style="border-radius: 16px; cursor: pointer;"
+                        onclick="new bootstrap.Modal('#modalLocalizacao').show()">
+                        <div>
+                            <small class="text-muted d-block fw-bold"
+                                style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Sua
+                                Localização</small>
+                            <strong class="text-dark" id="lblLocalizacao" style="font-size: 0.95rem;">
+                                <i class="bi bi-geo-alt-fill text-danger me-1"></i> Padrão (Porto Alegre)
+                            </strong>
+                        </div>
+                        <button class="btn btn-sm btn-light border shadow-sm rounded-circle"
+                            style="width: 36px; height: 36px;">
+                            <i class="bi bi-sliders"></i>
+                        </button>
+                    </div>
                     <div id="listaBarbearias"></div>
                 </div>
                 <div id="tab-agenda" class="tab-content">
@@ -69,10 +455,11 @@
                     <h6 class="fw-bold text-muted small mt-4 mb-2">Últimos Atendimentos</h6>
                     <div id="agsUltimos"></div>
                 </div>
+
                 <div id="tab-perfil" class="tab-content">
                     <div class="card card-custom p-4 text-center mb-3">
                         <div class="position-relative d-inline-block mx-auto mb-2">
-                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
+                            <div class="bg-dark text-white rounded-circle d-flex align-items-center justify-content-center"
                                 style="width: 80px; height: 80px; font-size: 2rem; background-size: cover; background-position: center;"
                                 id="letraAvatar">U</div>
                             <button class="btn btn-sm btn-light position-absolute bottom-0 end-0 rounded-circle shadow"
@@ -81,23 +468,28 @@
                             <input type="file" id="inputFotoCliente" accept="image/*" style="display: none;"
                                 onchange="alterarFotoCliente(event)">
                         </div>
-                        <h5 id="nomePerfil" class="m-0">Usuário</h5>
+                        <h5 id="nomePerfil" class="m-0 fw-bold">Usuário</h5>
                         <p class="text-muted small mb-0" id="emailPerfil"></p>
                     </div>
                     <div class="card card-custom p-3 mb-4">
                         <h6 class="fw-bold mb-3 border-bottom pb-2">Meus Dados</h6>
                         <div class="mb-2"><label class="small fw-bold">Nome</label><input type="text"
-                                id="editNomeCliente" class="form-control form-control-sm"></div>
-                        <div class="mb-3"><label class="small fw-bold">Telefone / WhatsApp</label><input type="text"
-                                id="editTelCliente" class="form-control form-control-sm"></div>
-                        <button class="btn btn-primary btn-sm w-100 rounded-pill fw-bold"
-                            onclick="salvarPerfilCliente()">Salvar Alterações</button>
+                                id="editNomeCliente" class="form-control form-control-sm bg-light border-0"></div>
+                        <div class="mb-2"><label class="small fw-bold">Telefone / WhatsApp</label><input type="text"
+                                id="editTelCliente" class="form-control form-control-sm bg-light border-0"></div>
+                        <div class="mb-3"><label class="small fw-bold">CPF</label><input type="text" id="editCpfCliente"
+                                class="form-control form-control-sm bg-light border-0" placeholder="000.000.000-00">
+                        </div>
+
+                        <button class="btn btn-black w-100 mt-2 py-2" onclick="salvarPerfilCliente()">Salvar
+                            Alterações</button>
                     </div>
                     <div class="text-center mt-4 mb-2">
-                        <button onclick="logout()" class="btn btn-sm btn-outline-danger px-4 rounded-pill"><i
-                                class="bi bi-box-arrow-right me-1"></i> Sair da Conta</button>
+                        <button onclick="logout()" class="btn btn-gray px-4"><i class="bi bi-box-arrow-right me-1"></i>
+                            Sair da Conta</button>
                     </div>
                 </div>
+
             </div>
             <div class="bottom-nav">
                 <div class="nav-item active" onclick="mudarAba('descubra', this)"><i
@@ -133,8 +525,7 @@
                 <h6 class="fw-bold mb-3">Serviços</h6>
                 <div class="card card-custom p-3 shadow-sm mb-4">
                     <div id="listaServicos"></div>
-                    <button onclick="abrirModalAgendamento()"
-                        class="btn btn-primary w-100 rounded-pill fw-bold mt-3 py-2"><i
+                    <button onclick="abrirModalAgendamento()" class="btn btn-black w-100 mt-3 py-2"><i
                             class="bi bi-calendar-plus me-2"></i> Agendar Horário</button>
                 </div>
                 <div id="sectionComodidades" style="display: none;">
@@ -142,11 +533,17 @@
                     <div class="d-flex flex-wrap gap-2 mb-4" id="listaComodidades"></div>
                 </div>
                 <div class="card card-custom p-3 shadow-sm mb-4">
-                    <h6 class="fw-bold"><i class="bi bi-geo-alt text-primary"></i> Localização</h6>
+                    <h6 class="fw-bold"><i class="bi bi-geo-alt"></i> Localização</h6>
                     <p class="small text-muted mb-2" id="textoEnderecoBarbearia"></p>
+
                     <div id="mapaInline" onclick="abrirModalMapa()"
                         style="height: 150px; width: 100%; border-radius: 12px; z-index: 1; cursor: pointer; border: 1px solid #ddd;"
                         title="Clique para ampliar"></div>
+
+                    <div class="d-flex gap-2 mt-3">
+                        <button onclick="abrirModalMapa()" class="btn btn-gray w-50"> Ampliar</button>
+                        <a id="btnUberInline" href="#" target="_blank" class="btn btn-black w-50"> Pedir Uber</a>
+                    </div>
                 </div>
                 <h6 class="fw-bold mb-3">Galeria</h6>
                 <div class="d-flex overflow-x-auto gap-2 pb-2 mb-4" id="galeriaBar"></div>
@@ -163,22 +560,47 @@
             <div class="modal-content rounded-4 border-0 shadow">
                 <div class="modal-body p-4">
                     <h5 class="fw-bold mb-3">Agendar Horário</h5>
-                    <label class="small fw-bold text-muted mb-1">1. Escolha o Serviço</label>
-                    <select class="form-select mb-4 rounded-3" id="selectServico" onchange="aoMudarServico()">
-                        <option value="">Selecione...</option>
-                    </select>
+
+                    <div id="areaBarbeiro" style="display: none;">
+                        <label class="small fw-bold text-muted mb-1">Escolha o Profissional</label>
+                        <select class="form-select mb-3 rounded-3" id="selectBarbeiro" onchange="aoMudarBarbeiro()">
+                            <option value="">Selecione...</option>
+                        </select>
+                    </div>
+
+                    <div id="areaServico" style="display: none;">
+                        <label class="small fw-bold text-muted mb-1">Escolha o Serviço</label>
+                        <select class="form-select mb-4 rounded-3" id="selectServico" onchange="aoMudarServico()">
+                            <option value="">Selecione...</option>
+                        </select>
+                    </div>
+
                     <div id="areaDataHora" style="display: none;">
-                        <label class="small fw-bold text-muted mb-1">2. Escolha a Data</label>
-                        <div class="d-flex overflow-x-auto gap-2 pb-2 mb-4" id="modalDatas"></div>
-                        <label class="small fw-bold text-muted mb-1">3. Escolha o Horário</label>
+                        <label class="small fw-bold text-muted mb-1">Escolha a Data</label>
+
+                        <div class="agenda-container-wrapper mb-4">
+                            <button type="button" class="nav-scroll-btn" onclick="scrollDatas(-150)">
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+
+                            <div id="modalDatas">
+                            </div>
+
+                            <button type="button" class="nav-scroll-btn" onclick="scrollDatas(150)">
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                        </div>
+
+                        <label class="small fw-bold text-muted mb-1">Escolha o Horário</label>
                         <div id="areaHorariosList" style="display: none;">
                             <h6 class="fw-bold small mb-2 mt-2">Manhã</h6>
                             <div class="d-flex flex-wrap gap-2 mb-3" id="modalHorasManha"></div>
                             <h6 class="fw-bold small mb-2">Tarde</h6>
                             <div class="d-flex flex-wrap gap-2 mb-4" id="modalHorasTarde"></div>
                         </div>
+
                         <div id="areaPagamento" style="display: none; margin-top: 15px;">
-                            <label class="small fw-bold text-muted mb-1">4. Forma de Pagamento</label>
+                            <label class="small fw-bold text-muted mb-1">Forma de Pagamento</label>
                             <select class="form-select mb-4 rounded-3 bg-light" id="selectPagamento"
                                 onchange="verificarLiberacaoConfirmar()">
                                 <option value="">Selecione...</option>
@@ -187,8 +609,9 @@
                             </select>
                         </div>
                     </div>
+
                     <button id="btnConfirmar" disabled onclick="finalizarReserva()"
-                        class="btn btn-primary w-100 rounded-pill p-3 fw-bold mt-2">Confirmar Agendamento</button>
+                        class="btn btn-black w-100 mt-2 py-3">Confirmar Agendamento</button>
                 </div>
             </div>
         </div>
@@ -251,12 +674,41 @@
                 </div>
                 <div class="modal-body p-3">
                     <div
-                        style="position: relative; width: 100%; height: 350px; border-radius: 12px; overflow: hidden; z-index: 1; border: 1px solid #ddd;">
+                        style="position: relative; width: 100%; height: 300px; border-radius: 12px; overflow: hidden; z-index: 1; border: 1px solid #ddd; margin-bottom: 15px;">
                         <div id="mapaCliente" style="height: 100%; width: 100%;"></div>
-                        <a id="btnAbrirGPS" href="#" target="_blank"
-                            class="btn btn-success rounded-pill fw-bold shadow-lg"
-                            style="position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; font-size: 1.05rem;"><i
-                                class="bi bi-geo-alt-fill me-1"></i> Abrir no Maps</a>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a id="btnAbrirGPS" href="#" target="_blank" class="btn btn-gray w-50"> Maps</a>
+                        <a id="btnUberModal" href="#" target="_blank" class="btn btn-black w-50"> Pedir Uber</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalLocalizacao" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="fw-bold text-primary-custom mb-0">Onde você está?</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <button onclick="solicitarLocalizacao(true)" class="btn btn-black w-100 mb-4 py-3 shadow-sm">
+                        <i class="bi bi-crosshair me-2"></i> Usar meu GPS Atual
+                    </button>
+
+                    <div class="d-flex align-items-center mb-3">
+                        <hr class="flex-grow-1 border-secondary opacity-25">
+                        <span class="mx-3 text-muted small fw-bold" style="font-size: 0.7rem;">OU DIGITE O CEP</span>
+                        <hr class="flex-grow-1 border-secondary opacity-25">
+                    </div>
+
+                    <div class="input-group shadow-sm" style="border-radius: 8px; overflow: hidden;">
+                        <input type="text" id="inputCepBusca" class="form-control border-0 bg-light py-2"
+                            placeholder="Ex: 90000-000" maxlength="9">
+                        <button onclick="buscarPorCep()" class="btn btn-gray border-0 px-4"><i
+                                class="bi bi-search"></i></button>
                     </div>
                 </div>
             </div>
@@ -270,6 +722,8 @@
         let estSel, srvSelId, dataSel, horaSel;
         let idReagendamento = null;
         let mapaCli, markerCli, mapaInline, markerInline;
+        let userLat = -30.0346;
+        let userLng = -51.2177;
 
         function getHeaders() {
             const token = localStorage.getItem('token');
@@ -313,6 +767,7 @@
             }
             document.getElementById('editNomeCliente').value = user.nome;
             document.getElementById('editTelCliente').value = user.telefone || '';
+            document.getElementById('editCpfCliente').value = user.cpf || '';
         }
 
         async function alterarFotoCliente(e) {
@@ -328,9 +783,17 @@
         }
 
         async function salvarPerfilCliente() {
-            const nome = document.getElementById('editNomeCliente').value; const tel = document.getElementById('editTelCliente').value;
-            await fetch(`http://localhost:8080/api/usuarios/${user.id}/completar-perfil`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ nome: nome, telefone: tel }) });
-            user.nome = nome; user.telefone = tel; localStorage.setItem('usuarioLogado', JSON.stringify(user));
+            const nome = document.getElementById('editNomeCliente').value;
+            const tel = document.getElementById('editTelCliente').value;
+            const cpf = document.getElementById('editCpfCliente').value;
+
+            await fetch(`http://localhost:8080/api/usuarios/${user.id}/completar-perfil`, {
+                method: 'PUT', headers: getHeaders(),
+                body: JSON.stringify({ nome: nome, telefone: tel, cpf: cpf })
+            });
+
+            user.nome = nome; user.telefone = tel; user.cpf = cpf;
+            localStorage.setItem('usuarioLogado', JSON.stringify(user));
             alert("Perfil atualizado com sucesso!"); renderizarPerfil();
         }
 
@@ -377,47 +840,104 @@
                 const isPago = m.statusPagamento === 'PAGO';
                 const isDinheiro = m.formaPagamento === 'DINHEIRO';
 
-                let cor = m.status === 'CONCLUIDO' ? "#198754" : m.status === 'CANCELADO' ? "#dc3545" : m.status === 'REAGENDAMENTO_PENDENTE' ? "#fd7e14" : m.status === 'PENDENTE_PAGAMENTO' ? "#0dcaf0" : "#198754";
-                let label = m.status === 'CONCLUIDO' ? "Concluído" : m.status === 'CANCELADO' ? "Cancelado" : m.status === 'REAGENDAMENTO_PENDENTE' ? "Pendente" : m.status === 'PENDENTE_PAGAMENTO' ? "Aguardando Pgto" : "Confirmado";
+                let cor = m.status === 'CANCELADO' ? "#dc3545" :
+                    m.status === 'REAGENDAMENTO_PENDENTE' ? "#fd7e14" :
+                        m.status === 'PENDENTE_PAGAMENTO' ? "#0dcaf0" :
+                            m.status === 'CONCLUIDO' ? "#6c757d" :
+                                "#0d6efd";
+
+                let label = m.status === 'CONCLUIDO' ? "Concluído" : m.status === 'CANCELADO' ? "Cancelado" : m.status === 'REAGENDAMENTO_PENDENTE' ? "Pendente" : m.status === 'PENDENTE_PAGAMENTO' ? "Aguardando Pagamento" : "Confirmado";
 
                 let statusFinancHtml = '';
-                if (isDinheiro) {
-                    statusFinancHtml = `<div class="mb-3"><span class="badge bg-secondary w-100 py-2"><i class="bi bi-cash-coin me-1"></i> PAGAMENTO NO LOCAL</span></div>`;
-                } else if (m.status !== 'CANCELADO') {
-                    statusFinancHtml = `<div class="mb-3"><span class="badge ${isPago ? 'bg-success' : 'bg-warning text-dark'} w-100 py-2" style="font-size: 0.75rem;"><i class="bi ${isPago ? 'bi-check-circle-fill' : 'bi-clock-history'} me-1"></i> PAGAMENTO: ${isPago ? 'CONFIRMADO (ONLINE)' : 'PENDENTE'}</span></div>`;
+                if (m.status === 'CONCLUIDO' || isPago) {
+                    statusFinancHtml = `<span class="small" style="color: #0d6efd;"><i class="bi bi-check-circle-fill me-1"></i> Pago</span>`;
+                } else if (m.status === 'CANCELADO') {
+                    statusFinancHtml = `<span class="small text-muted">-</span>`;
+                } else if (isDinheiro) {
+                    statusFinancHtml = `<span class="small text-muted"><i class="bi bi-cash-coin me-1"></i> Pagar no local</span>`;
+                } else {
+                    statusFinancHtml = `<span class="small text-muted"><i class="bi bi-clock-history me-1"></i> Pendente</span>`;
                 }
 
-                let btnAcao = '';
+                let conteudoAcao = '';
                 if (m.status === 'AGENDADO' || m.status === 'PENDENTE_PAGAMENTO' || (m.status === 'REAGENDAMENTO_PENDENTE' && m.quemSugeriuReagendamento === 'CLIENTE')) {
-                    let btnPagar = (!isPago && !isDinheiro) ? `<button onclick="gerarPagamento(${m.id}, this)" class="btn btn-primary w-100 rounded-pill fw-bold mt-1 mb-2 shadow-sm" style="font-size: 0.9rem;"><i class="bi bi-credit-card-2-back me-2"></i> Pagar Agora</button>` : '';
-                    let txtAguardando = m.status === 'REAGENDAMENTO_PENDENTE' ? '<div class="text-center small text-warning mt-2 fw-bold">Aguardando confirmação...</div>' : '';
-                    btnAcao = `${btnPagar}${txtAguardando}<div class="d-flex gap-2"><button onclick="iniciarReagendamento(${m.id}, ${m.estabelecimento?.id}, ${m.servico?.id})" class="btn btn-sm border-primary text-primary w-50 rounded-pill">Remarcar</button><button onclick="cancAg(${m.id})" class="btn btn-sm border-danger text-danger w-50 rounded-pill">Cancelar</button></div>`;
+                    let btnPagar = (!isPago && !isDinheiro) ? `<button onclick="gerarPagamento(${m.id}, this)" class="btn btn-black w-100 mb-3 py-2">Pagar Agora</button>` : '';
+                    let txtAguardando = m.status === 'REAGENDAMENTO_PENDENTE' ? '<div class="text-center small text-warning mt-1 mb-3 fw-bold">Aguardando confirmação...</div>' : '';
+
+                    conteudoAcao = `
+        ${btnPagar}${txtAguardando}
+        <div class="d-flex gap-2">
+            <button onclick="iniciarReagendamento(${m.id}, ${m.estabelecimento?.id}, ${m.servico?.id}, ${m.barbeiro?.id})" class="btn btn-gray w-50 py-2">Remarcar</button>
+            <button onclick="cancAg(${m.id})" class="btn btn-black w-50 py-2">Cancelar</button>
+        </div>`;
                 } else if (m.status === 'REAGENDAMENTO_PENDENTE' && m.quemSugeriuReagendamento === 'ESTABELECIMENTO') {
                     const dtProp = new Date(m.dataHoraProposta);
-                    btnAcao = `<div class="alert alert-warning p-2 mt-2 small border-0"><strong>Atenção!</strong> A barbearia sugeriu novo horário:<br><i class="bi bi-calendar"></i> ${dtProp.toLocaleDateString()} às ${dtProp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div><div class="d-flex gap-2 mt-2"><button onclick="aceitarProposta(${m.id})" class="btn btn-sm btn-success w-50 rounded-pill fw-bold">Aceitar</button><button onclick="iniciarReagendamento(${m.id}, ${m.estabelecimento?.id}, ${m.servico?.id})" class="btn btn-sm btn-outline-primary w-50 rounded-pill">Outro</button></div>`;
+                    conteudoAcao = `
+        <div class="alert alert-warning p-2 small border-0 rounded-3 mb-3 text-start"><strong>Atenção!</strong> A barbearia sugeriu novo horário:<br><i class="bi bi-calendar"></i> ${dtProp.toLocaleDateString()} às ${dtProp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+        <div class="d-flex gap-2">
+            <button onclick="aceitarProposta(${m.id})" class="btn btn-black w-50 py-2" style="background-color: #198754 !important;">Aceitar</button>
+            <button onclick="iniciarReagendamento(${m.id}, ${m.estabelecimento?.id}, ${m.servico?.id}, ${m.barbeiro?.id})" class="btn btn-gray w-50 py-2">Outro</button>
+        </div>`;
                 } else if (m.status === 'CONCLUIDO' && !m.notaAvaliacao) {
-                    btnAcao = `<button onclick="abrirModalAvaliar(${m.id}, '${m.estabelecimento?.nomeBarbearia}')" class="btn btn-sm btn-outline-primary w-100 rounded-pill"><i class="bi bi-star"></i> Avaliar Serviço</button>`;
+                    conteudoAcao = `
+        <button onclick="abrirModalAvaliar(${m.id}, '${m.estabelecimento?.nomeBarbearia}')" class="btn btn-gray w-100 py-2"><i class="bi bi-star me-1"></i> Avaliar Serviço</button>`;
                 }
 
+                const dia = dt.toLocaleDateString('pt-BR', { day: '2-digit' });
+                const mes = dt.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '').toUpperCase();
+                const hora = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
                 return `
-                    <div class="ticket-card">
-                        <div class="ticket-indicator"></div>
-                        <div class="p-3 ps-4">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <div>
-                                    <h6 class="fw-bold mb-1" style="color: #2C4E80;">${m.servico?.nome}</h6>
-                                    <p class="text-muted small mb-0"><i class="bi bi-shop"></i> ${m.estabelecimento?.nomeBarbearia || 'Barbearia'}</p>
-                                </div>
-                                <span class="badge" style="background-color: ${cor}15; color: ${cor}; border: 1px solid ${cor}40;">${label}</span>
-                            </div>
-                            <div class="d-flex align-items-center small text-dark mb-3 bg-light p-2 rounded-3 border">
-                                <i class="bi bi-calendar-event me-2 text-primary"></i> <strong>${dt.toLocaleDateString()}</strong>
-                                <i class="bi bi-clock ms-3 me-2 text-primary"></i> <strong>${dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</strong>
-                            </div>
-                            ${statusFinancHtml}
-                            ${btnAcao}
+        <div class="card border-0 shadow-sm mb-4" style="border-radius: 20px; background: #ffffff;">
+            <div class="p-4">
+                
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="d-flex align-items-center gap-2 text-truncate pe-3">
+                        <div class="d-flex justify-content-center align-items-center rounded-circle" style="width: 36px; height: 36px; background-color: #f3f4f6;">
+                            <i class="bi bi-shop" style="font-size: 1.1rem; color: #111827;"></i>
                         </div>
-                    </div>`;
+                        <h5 class="mb-0 fw-bold text-truncate" style="color: #111827; letter-spacing: -0.3px; font-size: 1.2em;">
+                            ${m.estabelecimento?.nomeBarbearia || 'Barbearia'}
+                        </h5>
+                    </div>
+                    <div class="badge rounded-pill" style="background-color: ${cor}15; color: ${cor}; font-weight: 600; padding: 0.5em 0.8em; letter-spacing: 0.3px;">
+                        ${label}
+                    </div>
+                </div>
+
+                <div class="p-3 mb-4" style="background-color: #f8f9fa; border-radius: 16px; border: 1px solid #e9ecef;">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="text-center bg-white rounded-3 shadow-sm py-1 px-2" style="min-width: 55px; border: 1px solid #dee2e6;">
+                                <div class="text-uppercase fw-bold" style="font-size: 0.65rem; color: #374151; letter-spacing: 1px;">${mes}</div>
+                                <div class="fw-bolder text-dark" style="font-size: 1.3rem; line-height: 1.1;">${dia}</div>
+                            </div>
+                            <div style="width: 1px; height: 35px; background-color: #dee2e6;"></div>
+                            <div>
+                                <div class="fw-bold text-dark d-flex align-items-center gap-1" style="font-size: 1.1rem;">
+                                    <i class="bi bi-clock" style="color: #374151; font-size: 0.95rem;"></i> ${hora}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-end ps-3 border-start" style="border-color: #dee2e6 !important;">
+                            <div class="text-uppercase text-muted fw-bold mb-1" style="font-size: 0.6rem; letter-spacing: 0.5px;">Pagamento</div>
+                            ${statusFinancHtml}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-2 text-center">
+                    <h6 class="fw-bold mb-1 text-dark" style="letter-spacing: -0.2px; font-size: 1.05rem;">
+                        ${m.servico?.nome}
+                    </h6>
+                    <div class="text-muted mt-1" style="font-size: 0.9rem;">
+                        Horário marcado com: <strong class="text-dark">${m.barbeiro?.nome || 'Equipe'}</strong>
+                    </div>
+                </div>
+
+                ${conteudoAcao ? `<div class="mt-3 text-center">${conteudoAcao}</div>` : ''}
+            </div>
+        </div>`;
             };
 
             agsFuturosData.forEach(m => { agsFuturosDiv.innerHTML += renderCard(m); });
@@ -441,8 +961,22 @@
         }
 
         function abrirModalMapa() {
-            let lat = estSel.latitude || -30.0346; let lng = estSel.longitude || -51.2177;
+            let lat = estSel.latitude || -30.0346;
+            let lng = estSel.longitude || -51.2177;
+
             document.getElementById('btnAbrirGPS').href = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
+
+            let dropoffObj = {
+                addressLine1: `${estSel.rua}, ${estSel.numero} - ${estSel.bairro}`,
+                addressLine2: estSel.cidade,
+                latitude: lat,
+                longitude: lng,
+                source: "SEARCH"
+            };
+
+            let dropEncoded = encodeURIComponent(JSON.stringify(dropoffObj));
+            document.getElementById('btnUberModal').href = `https://m.uber.com/go/home?drop[0]=${dropEncoded}`;
+
             new bootstrap.Modal('#modalMapaCliente').show();
             setTimeout(() => {
                 if (!mapaCli) {
@@ -472,13 +1006,27 @@
                 document.getElementById('sectionComodidades').style.display = 'block';
                 document.getElementById('listaComodidades').innerHTML = estSel.comodidades.split(',').map(c => {
                     let ico = iconesComodidades[c.trim()] || "bi-check-circle";
-                    return `<div class="comodidade-badge"><i class="bi ${ico} text-primary"></i> ${c.trim()}</div>`;
+                    return `<div class="comodidade-badge"><i class="bi ${ico}"></i> ${c.trim()}</div>`;
                 }).join('');
             } else { document.getElementById('sectionComodidades').style.display = 'none'; }
 
             document.getElementById('textoEnderecoBarbearia').innerText = `${estSel.rua}, ${estSel.numero} - ${estSel.bairro}, ${estSel.cidade}`;
 
             let lat = estSel.latitude || -30.0346; let lng = estSel.longitude || -51.2177;
+
+            let btnInlineUber = document.getElementById('btnUberInline');
+            if (btnInlineUber) {
+                let dropoffObjInline = {
+                    addressLine1: `${estSel.rua}, ${estSel.numero} - ${estSel.bairro}`,
+                    addressLine2: estSel.cidade,
+                    latitude: lat,
+                    longitude: lng,
+                    source: "SEARCH"
+                };
+                let dropEncodedInline = encodeURIComponent(JSON.stringify(dropoffObjInline));
+                btnInlineUber.href = `https://m.uber.com/go/home?drop[0]=${dropEncodedInline}`;
+            }
+
             if (!mapaInline) {
                 mapaInline = L.map('mapaInline', { zoomControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, attributionControl: false }).setView([lat, lng], 15);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapaInline); markerInline = L.marker([lat, lng]).addTo(mapaInline);
@@ -488,7 +1036,7 @@
             document.getElementById('listaServicos').innerHTML = servCache[id].map((s, idx) => `
                 <div class="d-flex justify-content-between align-items-center py-2 ${idx !== servCache[id].length - 1 ? 'border-bottom' : ''}">
                     <div><h6 class="fw-bold m-0">${s.nome}</h6><small class="text-muted">${s.duracaoMinutos} min</small></div>
-                    <div class="fw-bold text-primary">R$ ${s.preco.toFixed(2)}</div>
+                    <div class="text-muted">R$ ${s.preco.toFixed(2)}</div>
                 </div>`).join('');
 
             const galeriaDiv = document.getElementById('galeriaBar');
@@ -553,44 +1101,8 @@
             new bootstrap.Modal('#modalGaleriaCompleta').show();
         }
 
-        function abrirModalAgendamento(isEdicao = false) {
-            if (!user) { window.location.href = 'login.html'; return; }
-            if (!isEdicao) idReagendamento = null; dataSel = null; horaSel = null;
-            if (!isEdicao) srvSelId = null;
-
-            document.getElementById('btnConfirmar').disabled = true; document.getElementById('btnConfirmar').innerText = idReagendamento ? "Confirmar Reagendamento" : "Confirmar Agendamento";
-            document.getElementById('areaDataHora').style.display = isEdicao ? 'block' : 'none'; document.getElementById('areaHorariosList').style.display = 'none'; document.getElementById('areaPagamento').style.display = 'none';
-
-            let selectHtml = isEdicao ? '' : '<option value="">Selecione o serviço...</option>';
-            document.getElementById('selectServico').innerHTML = selectHtml + servCache[estSel.id].map(s => `<option value="${s.id}">${s.nome} - R$ ${s.preco.toFixed(2)} (${s.duracaoMinutos}m)</option>`).join('');
-
-            if (isEdicao) { document.getElementById('selectServico').value = srvSelId; document.getElementById('selectServico').disabled = true; } else { document.getElementById('selectServico').disabled = false; }
-
-            let optionsPgto = `<option value="">Selecione...</option><option value="PIX">PIX (Aprovação Imediata)</option><option value="CARTAO">Cartão de Crédito</option>`;
-            if (user.contaVerificada) { optionsPgto += `<option value="DINHEIRO">Dinheiro (Pagar no local)</option>`; }
-            document.getElementById('selectPagamento').innerHTML = optionsPgto;
-
-            const container = document.getElementById('modalDatas'); container.innerHTML = '';
-            let hoje = new Date(); const dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']; const diasL = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
-            let configHorarios = JSON.parse(estSel.horariosFuncionamento || '[]'); let diasFechadosStr = estSel.diasFechados || "";
-
-            for (let i = 0; i < 14; i++) {
-                let d = new Date(hoje); d.setDate(hoje.getDate() + i); let iso = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-                let dIdx = d.getDay(); let nomeDiaSemana = diasL[dIdx == 0 ? 6 : dIdx - 1]; let configDia = configHorarios.find(x => x.dia === nomeDiaSemana);
-                let semHorarioFixo = !configDia || (!configDia.abertura1 && !configDia.abertura2); let fechadoExcecao = diasFechadosStr.includes(iso);
-
-                if (semHorarioFixo || fechadoExcecao) {
-                    container.innerHTML += `<div class="date-card" style="opacity: 0.4; cursor: not-allowed; background-color: #e9ecef; border-color: #ddd;" title="Fechado"><small class="text-muted">${dias[d.getDay()]}</small><br><strong class="text-muted">${d.getDate()}</strong></div>`;
-                } else {
-                    container.innerHTML += `<div class="date-card" id="d-${iso}" onclick="selData('${iso}', '${d.getDay()}')"><small>${dias[d.getDay()]}</small><br><strong>${d.getDate()}</strong></div>`;
-                }
-            }
-            new bootstrap.Modal('#modalAgendamento').show();
-            if (isEdicao && document.getElementById('d-' + dataSel)) { document.getElementById('d-' + dataSel).click(); }
-        }
-
-        async function iniciarReagendamento(agId, estId, servId) {
-            idReagendamento = agId; estSel = estCache[estId]; srvSelId = servId;
+        async function iniciarReagendamento(agId, estId, servId, barbId) {
+            idReagendamento = agId; estSel = estCache[estId]; srvSelId = servId; barbeiroSelId = barbId;
             if (!servCache[estId]) { const resS = await fetch(`http://localhost:8080/api/servicos/estabelecimento/${estId}`, { headers: getHeaders() }); servCache[estId] = await resS.json(); }
             abrirModalAgendamento(true);
         }
@@ -600,53 +1112,6 @@
             if (srvSelId) { document.getElementById('areaDataHora').style.display = 'block'; if (dataSel) document.getElementById(`d-${dataSel}`).click(); } else { document.getElementById('areaDataHora').style.display = 'none'; document.getElementById('btnConfirmar').disabled = true; }
         }
 
-        function selData(iso, dIdx) {
-            dataSel = iso; horaSel = null; document.getElementById('btnConfirmar').disabled = true;
-            document.querySelectorAll('.date-card').forEach(x => x.classList.remove('active')); document.getElementById(`d-${iso}`).classList.add('active');
-            document.getElementById('areaHorariosList').style.display = 'block'; document.getElementById('areaPagamento').style.display = 'none';
-
-            let srvInfo = servCache[estSel.id].find(x => x.id == srvSelId); let srvDuracao = srvInfo ? srvInfo.duracaoMinutos : 30;
-            const diasL = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
-            let config = JSON.parse(estSel.horariosFuncionamento || '[]').find(x => x.dia === diasL[dIdx == 0 ? 6 : dIdx - 1]);
-
-            const mDiv = document.getElementById('modalHorasManha'); const tDiv = document.getElementById('modalHorasTarde'); mDiv.innerHTML = ''; tDiv.innerHTML = '';
-            let diasFechadosStr = estSel.diasFechados || "";
-            if (diasFechadosStr.includes(iso)) { mDiv.innerHTML = '<small class="text-danger fw-bold"><i class="bi bi-door-closed"></i> Estabelecimento Fechado neste dia</small>'; return; }
-            if (!config || (!config.abertura1 && !config.abertura2)) { mDiv.innerHTML = '<small class="text-danger">Fechado</small>'; return; }
-
-            const agora = new Date(); const hojeIso = new Date(agora.getTime() - (agora.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
-            const hrAtual = agora.getHours().toString().padStart(2, '0') + ":" + agora.getMinutes().toString().padStart(2, '0');
-
-            let intervalosOcupados = [];
-            agsOcupados.forEach(a => {
-                let addIntervalo = (dataHoraStr) => {
-                    if (dataHoraStr && dataHoraStr.startsWith(iso)) {
-                        let [h, m] = dataHoraStr.split('T')[1].substring(0, 5).split(':').map(Number);
-                        let start = (h * 60) + m; let dur = a.servico?.duracaoMinutos || 30; intervalosOcupados.push({ start: start, end: start + dur });
-                    }
-                };
-                addIntervalo(a.dataHoraInicio); addIntervalo(a.dataHoraProposta);
-            });
-
-            const isBl = (t) => {
-                if (iso === hojeIso && t <= hrAtual) return true;
-                let [th, tm] = t.split(':').map(Number); let start = (th * 60) + tm; let end = start + srvDuracao;
-                for (let inter of intervalosOcupados) { if (start < inter.end && end > inter.start) return true; } return false;
-            };
-
-            function addS(ab, fe, tg) {
-                if (!ab || !fe) { tg.innerHTML = '<small class="text-muted">Sem horários</small>'; return; }
-                let [h, m] = ab.split(':').map(Number); let [fh, fm] = fe.split(':').map(Number); let hs = false;
-                while (h < fh || (h === fh && m < fm)) {
-                    let t = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`; let bl = isBl(t);
-                    tg.innerHTML += `<div class="time-badge ${bl ? 'disabled' : ''}" onclick="${bl ? '' : 'selHora(\'' + t + '\', this)'}">${t}</div>`; hs = true;
-                    m += 30; if (m >= 60) { m = 0; h++; }
-                }
-                if (!hs) tg.innerHTML = '<small class="text-muted">Indisponível</small>';
-            }
-            addS(config.abertura1, config.fechamento1, mDiv); addS(config.abertura2, config.fechamento2, tDiv);
-        }
-
         function selHora(txt, el) {
             horaSel = txt; document.querySelectorAll('.time-badge').forEach(x => x.classList.remove('active')); el.classList.add('active');
             if (idReagendamento) { document.getElementById('btnConfirmar').disabled = false; } else { document.getElementById('areaPagamento').style.display = 'block'; verificarLiberacaoConfirmar(); }
@@ -654,32 +1119,35 @@
 
         function verificarLiberacaoConfirmar() { document.getElementById('btnConfirmar').disabled = (document.getElementById('selectPagamento').value === ""); }
 
-        async function finalizarReserva() {
-            const btnConfirmar = document.querySelector('#modalAgendamento .modal-footer .btn-custom') || document.getElementById('btnConfirmar');
-            const formPgto = document.getElementById('selectPagamento').value;
-            if (btnConfirmar) { btnConfirmar.disabled = true; btnConfirmar.innerText = "A processar..."; }
-
-            try {
-                let url = 'http://localhost:8080/api/agendamentos'; let method = 'POST';
-                let bodyData = { dataHoraInicio: `${dataSel}T${horaSel}:00`, cliente: { id: user.id, role: 'CLIENTE' }, estabelecimento: { id: estSel.id, role: 'ESTABELECIMENTO' }, servico: { id: parseInt(srvSelId) }, formaPagamento: formPgto || 'DINHEIRO' };
-
-                if (idReagendamento) { url = `http://localhost:8080/api/agendamentos/${idReagendamento}/propor-reagendamento`; method = 'PUT'; bodyData = { dataHoraProposta: `${dataSel}T${horaSel}:00`, quemSugeriu: "CLIENTE" }; }
-
-                const response = await fetch(url, { method: method, headers: getHeaders(), body: JSON.stringify(bodyData) });
-                if (!response.ok) { const errorData = await response.json(); alert("Erro: " + (errorData.erro || "Horário Indisponível")); return; }
-
-                if (!idReagendamento && formPgto !== 'DINHEIRO') {
-                    const novoAg = await response.json(); await gerarPagamentoAutomatico(novoAg.id);
-                } else { alert(idReagendamento ? "Proposta de novo horário enviada à barbearia!" : "Agendamento confirmado para pagamento no local!"); location.reload(); }
-            } catch (error) { alert("Erro de comunicação."); } finally { if (btnConfirmar && btnConfirmar.innerText === "A processar...") { btnConfirmar.disabled = false; btnConfirmar.innerText = "Confirmar Agendamento"; } }
-        }
-
         async function gerarPagamentoAutomatico(agId) {
             const response = await fetch(`http://localhost:8080/api/agendamentos/${agId}/pagar`, { method: 'POST', headers: getHeaders() });
             if (response.ok) { const data = await response.json(); window.location.href = data.checkoutUrl; } else { alert("Agendamento criado, mas houve um erro ao redirecionar para o pagamento. Tente novamente na aba Agendamentos."); location.reload(); }
         }
 
-        async function cancAg(id) { if (!confirm("Cancelar horário?")) return; await fetch(`http://localhost:8080/api/agendamentos/${id}/status`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ status: 'CANCELADO' }) }); carregarMeusAgs(); }
+        async function cancAg(id) {
+            if (!confirm("Deseja realmente cancelar este agendamento?")) return;
+
+            try {
+                const response = await fetch(`http://localhost:8080/api/agendamentos/${id}/status`, {
+                    method: 'PUT',
+                    headers: getHeaders(),
+                    body: JSON.stringify({ status: 'CANCELADO' })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    alert("Erro: " + (data.erro || "Falha ao cancelar"));
+                    return;
+                }
+
+                alert("Agendamento cancelado com sucesso!");
+                carregarMeusAgs();
+            } catch (error) {
+                console.error("Erro na requisição:", error);
+                alert("Erro de conexão com o servidor.");
+            }
+        }
 
         function abrirModalAvaliar(id, nome) { document.getElementById('idAgendamentoAvaliar').value = id; document.getElementById('nomeBarAvaliar').innerText = nome; document.getElementById('comentarioAvaliacao').value = ''; setNota(0); new bootstrap.Modal('#modalAvaliar').show(); }
         function setNota(n) { document.getElementById('notaSelecionada').value = n; let s = document.getElementById('estrelasContainer').children; for (let i = 0; i < 5; i++) { if (i < n) s[i].classList.add('active'); else s[i].classList.remove('active'); } }
@@ -709,18 +1177,94 @@
         document.addEventListener("DOMContentLoaded", function () {
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('pagamento') === 'sucesso') { alert("Pagamento aprovado com sucesso! O seu agendamento está confirmado."); window.history.replaceState({}, document.title, window.location.pathname); if (typeof carregarMeusAgs === 'function') { setTimeout(carregarMeusAgs, 1500); } }
+            solicitarLocalizacao(false);
         });
+
+        function solicitarLocalizacao(fecharModal = false) {
+            const lbl = document.getElementById('lblLocalizacao');
+            if (lbl) lbl.innerHTML = `<span class="spinner-border spinner-border-sm text-danger me-2" role="status"></span> Buscando GPS...`;
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    async (position) => {
+                        userLat = position.coords.latitude;
+                        userLng = position.coords.longitude;
+
+                        try {
+                            let res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${userLat}&lon=${userLng}`);
+                            let data = await res.json();
+                            let city = data.address.city || data.address.town || data.address.village || 'Localização Atual';
+                            if (lbl) lbl.innerHTML = `<i class="bi bi-geo-alt-fill text-danger me-1"></i> ${city}`;
+                        } catch (e) {
+                            if (lbl) lbl.innerHTML = `<i class="bi bi-geo-alt-fill text-danger me-1"></i> Localização Atual`;
+                        }
+
+                        if (fecharModal) bootstrap.Modal.getInstance(document.getElementById('modalLocalizacao')).hide();
+                        carregarBarbearias();
+                    },
+                    (error) => {
+                        console.warn("Geolocalização negada.", error);
+                        if (lbl) lbl.innerHTML = `<i class="bi bi-geo-alt-fill text-danger me-1"></i> Padrão (Porto Alegre)`;
+                        carregarBarbearias();
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            } else {
+                carregarBarbearias();
+            }
+        }
+
+        async function buscarPorCep() {
+            let cep = document.getElementById('inputCepBusca').value.replace(/\D/g, '');
+            if (cep.length !== 8) { alert("Por favor, digite um CEP válido de 8 dígitos."); return; }
+
+            const btnBusca = document.querySelector('#modalLocalizacao .btn-gray');
+            btnBusca.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
+
+            try {
+                let resCep = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+                let dadosCep = await resCep.json();
+                if (dadosCep.erro) { alert("CEP não encontrado."); btnBusca.innerHTML = '<i class="bi bi-search"></i>'; return; }
+
+                let query = `${dadosCep.logradouro}, ${dadosCep.localidade}, Brazil`;
+                let resGps = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+                let dadosGps = await resGps.json();
+
+                if (dadosGps.length > 0) {
+                    userLat = parseFloat(dadosGps[0].lat);
+                    userLng = parseFloat(dadosGps[0].lon);
+
+                    document.getElementById('lblLocalizacao').innerHTML = `<i class="bi bi-geo-alt-fill text-danger me-1"></i> ${dadosCep.localidade}, ${dadosCep.uf}`;
+
+                    bootstrap.Modal.getInstance(document.getElementById('modalLocalizacao')).hide();
+                    carregarBarbearias();
+                } else {
+                    alert("Não foi possível traçar as coordenadas deste CEP no mapa.");
+                }
+            } catch (e) {
+                alert("Erro ao buscar a localização. Tente novamente.");
+            } finally {
+                btnBusca.innerHTML = '<i class="bi bi-search"></i>';
+            }
+        }
 
         async function carregarBarbearias() {
             try {
-                let lat = -30.0346; let lng = -51.2177;
-                const response = await fetch(`http://localhost:8080/api/usuarios/estabelecimentos/proximos?lat=${lat}&lng=${lng}&raioKm=50`, { headers: getHeaders() });
+                const response = await fetch(`http://localhost:8080/api/usuarios/estabelecimentos/proximos?lat=${userLat}&lng=${userLng}&raioKm=50`, { headers: getHeaders() });
                 if (!response.ok) throw new Error("Falha ao buscar estabelecimentos");
 
                 const estabelecimentos = await response.json();
                 const listaDiv = document.getElementById('listaBarbearias'); listaDiv.innerHTML = '';
 
-                if (estabelecimentos.length === 0) { listaDiv.innerHTML = '<p class="text-center text-muted py-5 mt-4">Nenhuma barbearia encontrada.</p>'; return; }
+                if (estabelecimentos.length === 0) {
+                    listaDiv.innerHTML = `
+                        <div class="text-center text-muted mt-5 p-4 bg-white rounded-4 shadow-sm border border-light">
+                            <i class="bi bi-compass fs-1 mb-3 d-block" style="color: #d1d5db;"></i>
+                            <h6 class="fw-bold text-dark">Nenhuma barbearia por perto.</h6>
+                            <p class="small">Tente expandir a sua busca alterando o CEP no menu de localização acima.</p>
+                        </div>`;
+                    return;
+                }
 
                 for (const est of estabelecimentos) {
                     estCache[est.id] = est;
@@ -729,30 +1273,34 @@
                         try { const resS = await fetch(`http://localhost:8080/api/servicos/estabelecimento/${est.id}`, { headers: getHeaders() }); if (resS.ok) servCache[est.id] = await resS.json(); } catch (e) { }
                     }
 
-                    let avs = [];
-                    try {
-                        const resAv = await fetch(`http://localhost:8080/api/agendamentos/estabelecimento/${est.id}`, { headers: getHeaders() });
-                        if (resAv.ok) { const ags = await resAv.json(); avs = ags.filter(a => a.notaAvaliacao != null); }
-                    } catch (e) { }
-
                     let capa = est.fotoPerfil ? `url('${est.fotoPerfil}')` : '#2C4E80';
 
+                    let badgeNovo = '';
+                    if (est.totalAtendimentos !== undefined && est.totalAtendimentos < 15) {
+                        badgeNovo = `<span class="badge bg-warning text-dark ms-2 align-middle shadow-sm" style="font-size: 0.65rem; border-radius: 4px; letter-spacing: 0.5px;"><i class="bi bi-stars"></i> NOVO</span>`;
+                    }
+
                     let ratingHtml = '';
-                    if (avs.length > 0) {
-                        let soma = avs.reduce((acc, curr) => acc + curr.notaAvaliacao, 0);
-                        let media = (soma / avs.length).toFixed(1);
-                        ratingHtml = `<span class="small text-dark ms-2" style="font-size: 0.9rem;"><i class="bi bi-star-fill text-dark"></i> ${media}</span>`;
+                    if (est.totalAvaliacoes && est.totalAvaliacoes > 0) {
+                        ratingHtml = `<span class="small text-dark ms-2 fw-bold" style="font-size: 0.85rem;"><i class="bi bi-star-fill text-warning"></i> ${(est.notaMedia || 0).toFixed(1)} <span class="text-muted fw-normal">(${est.totalAvaliacoes})</span></span>`;
+                    } else {
+                        ratingHtml = `<span class="small text-muted ms-2 fw-bold" style="font-size: 0.85rem;"><i class="bi bi-star"></i> Novo</span>`;
                     }
 
                     listaDiv.innerHTML += `
-                        <div class="card card-custom mb-3 overflow-hidden shadow-sm" onclick="abrirBarbearia(${est.id})" style="cursor: pointer;">
-                            <div style="height: 120px; background: ${capa}; background-size: cover; background-position: center;"></div>
+                        <div class="card card-custom mb-3 overflow-hidden shadow-sm border-0" onclick="abrirBarbearia(${est.id})" style="cursor: pointer; border-radius: 16px;">
+                            <div style="height: 140px; background: ${capa}; background-size: cover; background-position: center; position: relative;">
+                                <div style="position: absolute; bottom: 0; left: 0; right: 0; height: 50%; background: linear-gradient(to top, rgba(0,0,0,0.4), transparent);"></div>
+                            </div>
                             <div class="p-3">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <h6 class="fw-bold m-0">${est.nomeBarbearia || est.nome}</h6>
+                                    <h6 class="fw-bold m-0 text-dark" style="font-size: 1.1rem;">
+                                        ${est.nomeBarbearia || est.nome} ${badgeNovo}
+                                    </h6>
                                     ${ratingHtml} 
                                 </div>
-                                <p class="small text-muted mb-0"><i class="bi bi-geo-alt"></i> ${est.bairro || 'Endereço não informado'}, ${est.cidade || ''}</p>
+                                <p class="small text-muted mb-0 mt-1"><i class="bi bi-geo-alt"></i> ${est.bairro || 'Endereço não informado'}, ${est.cidade || ''}</p>
+                                <p class="small text-dark mb-0 mt-1" style="font-size: 0.75rem;"><i class="bi bi-cursor-fill text-primary"></i> A ${(est.distancia).toFixed(1)} km de você</p>
                             </div>
                         </div>
                     `;
@@ -763,7 +1311,201 @@
             }
         }
 
-        carregarBarbearias();
+        let barbeiroSelId = null;
+
+        async function abrirModalAgendamento(isEdicao = false) {
+            if (!user) { window.location.href = 'login.html'; return; }
+            if (!isEdicao) { idReagendamento = null; dataSel = null; horaSel = null; srvSelId = null; barbeiroSelId = null; }
+
+            document.getElementById('btnConfirmar').disabled = true;
+            document.getElementById('btnConfirmar').innerText = idReagendamento ? "Confirmar Reagendamento" : "Confirmar Agendamento";
+
+            document.getElementById('areaBarbeiro').style.display = 'none';
+            document.getElementById('areaServico').style.display = 'none';
+            document.getElementById('areaDataHora').style.display = 'none';
+            document.getElementById('areaHorariosList').style.display = 'none';
+            document.getElementById('areaPagamento').style.display = 'none';
+
+            let optionsPgto = `<option value="">Selecione...</option><option value="PIX">PIX (Aprovação Imediata)</option><option value="CARTAO">Cartão de Crédito</option>`;
+            if (user.contaVerificada) { optionsPgto += `<option value="DINHEIRO">Dinheiro (Pagar no local)</option>`; }
+            document.getElementById('selectPagamento').innerHTML = optionsPgto;
+
+            if (isEdicao) {
+                new bootstrap.Modal('#modalAgendamento').show();
+                mostrarAreaServico(true);
+            } else {
+                try {
+                    const res = await fetch(`http://localhost:8080/api/barbeiros/estabelecimento/${estSel.id}`, { headers: getHeaders() });
+                    const barbeiros = await res.json();
+
+                    if (barbeiros.length === 0) {
+                        alert("Desculpe, este estabelecimento ainda não tem profissionais registados para atendimento.");
+                        return;
+                    }
+
+                    const selectB = document.getElementById('selectBarbeiro');
+                    selectB.innerHTML = '<option value="">Selecione o profissional...</option>';
+
+                    if (barbeiros.length === 1) {
+                        barbeiroSelId = barbeiros[0].id;
+                        new bootstrap.Modal('#modalAgendamento').show();
+                        mostrarAreaServico(false);
+                    } else {
+                        barbeiros.forEach(b => { selectB.innerHTML += `<option value="${b.id}">${b.nome}</option>`; });
+                        document.getElementById('areaBarbeiro').style.display = 'block';
+                        new bootstrap.Modal('#modalAgendamento').show();
+                    }
+                } catch (e) {
+                    console.error("Erro ao buscar barbeiros", e);
+                    alert("Erro de comunicação ao carregar profissionais.");
+                }
+            }
+        }
+
+        function aoMudarBarbeiro() {
+            barbeiroSelId = document.getElementById('selectBarbeiro').value;
+            if (barbeiroSelId) mostrarAreaServico(false);
+            else document.getElementById('areaServico').style.display = 'none';
+        }
+
+        function mostrarAreaServico(isEdicao) {
+            document.getElementById('areaServico').style.display = 'block';
+            let selectHtml = isEdicao ? '' : '<option value="">Selecione o serviço...</option>';
+            document.getElementById('selectServico').innerHTML = selectHtml + servCache[estSel.id].map(s => `<option value="${s.id}">${s.nome} - R$ ${s.preco.toFixed(2)} (${s.duracaoMinutos}m)</option>`).join('');
+
+            if (isEdicao) {
+                document.getElementById('selectServico').value = srvSelId;
+                document.getElementById('selectServico').disabled = true;
+                aoMudarServico();
+            } else {
+                document.getElementById('selectServico').disabled = false;
+            }
+        }
+
+        function aoMudarServico() {
+            srvSelId = document.getElementById('selectServico').value;
+            if (srvSelId) {
+                document.getElementById('areaDataHora').style.display = 'block';
+                gerarDiasNoModal();
+                if (dataSel) document.getElementById(`d-${dataSel}`).click();
+            } else {
+                document.getElementById('areaDataHora').style.display = 'none';
+                document.getElementById('btnConfirmar').disabled = true;
+            }
+        }
+
+        function gerarDiasNoModal() {
+            const container = document.getElementById('modalDatas'); container.innerHTML = '';
+            let hoje = new Date(); const dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']; const diasL = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+            let configHorarios = JSON.parse(estSel.horariosFuncionamento || '[]'); let diasFechadosStr = estSel.diasFechados || "";
+
+            for (let i = 0; i < 14; i++) {
+                let d = new Date(hoje); d.setDate(hoje.getDate() + i); let iso = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                let dIdx = d.getDay(); let nomeDiaSemana = diasL[dIdx == 0 ? 6 : dIdx - 1]; let configDia = configHorarios.find(x => x.dia === nomeDiaSemana);
+                let semHorarioFixo = !configDia || (!configDia.abertura1 && !configDia.abertura2); let fechadoExcecao = diasFechadosStr.includes(iso);
+
+                if (semHorarioFixo || fechadoExcecao) {
+                    container.innerHTML += `<div class="date-card" style="opacity: 0.4; cursor: not-allowed; background-color: #e9ecef; border-color: #ddd;" title="Fechado"><small class="text-muted">${dias[d.getDay()]}</small><br><strong class="text-muted">${d.getDate()}</strong></div>`;
+                } else {
+                    container.innerHTML += `<div class="date-card" id="d-${iso}" onclick="selData('${iso}', '${d.getDay()}')"><small>${dias[d.getDay()]}</small><br><strong>${d.getDate()}</strong></div>`;
+                }
+            }
+        }
+
+        function selData(iso, dIdx) {
+            dataSel = iso; horaSel = null; document.getElementById('btnConfirmar').disabled = true;
+            document.querySelectorAll('.date-card').forEach(x => x.classList.remove('active')); document.getElementById(`d-${iso}`).classList.add('active');
+            document.getElementById('areaHorariosList').style.display = 'block'; document.getElementById('areaPagamento').style.display = 'none';
+
+            let srvInfo = servCache[estSel.id].find(x => x.id == srvSelId); let srvDuracao = srvInfo ? srvInfo.duracaoMinutos : 30;
+            const diasL = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+            let config = JSON.parse(estSel.horariosFuncionamento || '[]').find(x => x.dia === diasL[dIdx == 0 ? 6 : dIdx - 1]);
+
+            const mDiv = document.getElementById('modalHorasManha'); const tDiv = document.getElementById('modalHorasTarde'); mDiv.innerHTML = ''; tDiv.innerHTML = '';
+            let diasFechadosStr = estSel.diasFechados || "";
+            if (diasFechadosStr.includes(iso)) { mDiv.innerHTML = '<small class="text-danger fw-bold"><i class="bi bi-door-closed"></i> Fechado</small>'; return; }
+            if (!config || (!config.abertura1 && !config.abertura2)) { mDiv.innerHTML = '<small class="text-danger">Fechado</small>'; return; }
+
+            const agora = new Date(); const hojeIso = new Date(agora.getTime() - (agora.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+            const hrAtual = agora.getHours().toString().padStart(2, '0') + ":" + agora.getMinutes().toString().padStart(2, '0');
+
+            let intervalosOcupados = [];
+            agsOcupados.forEach(a => {
+                if (a.barbeiro && a.barbeiro.id == barbeiroSelId) {
+                    let addIntervalo = (dataHoraStr) => {
+                        if (dataHoraStr && dataHoraStr.startsWith(iso)) {
+                            let [h, m] = dataHoraStr.split('T')[1].substring(0, 5).split(':').map(Number);
+                            let start = (h * 60) + m; let dur = a.servico?.duracaoMinutos || 30; intervalosOcupados.push({ start: start, end: start + dur });
+                        }
+                    };
+                    addIntervalo(a.dataHoraInicio); addIntervalo(a.dataHoraProposta);
+                }
+            });
+
+            const isBl = (t) => {
+                if (iso === hojeIso && t <= hrAtual) return true;
+                let [th, tm] = t.split(':').map(Number); let start = (th * 60) + tm; let end = start + srvDuracao;
+                for (let inter of intervalosOcupados) { if (start < inter.end && end > inter.start) return true; } return false;
+            };
+
+            function addS(ab, fe, tg) {
+                if (!ab || !fe) { tg.innerHTML = '<small class="text-muted">Sem horários</small>'; return; }
+                let [h, m] = ab.split(':').map(Number); let [fh, fm] = fe.split(':').map(Number); let hs = false;
+                while (h < fh || (h === fh && m < fm)) {
+                    let t = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`; let bl = isBl(t);
+                    tg.innerHTML += `<div class="time-badge ${bl ? 'disabled' : ''}" onclick="${bl ? '' : 'selHora(\'' + t + '\', this)'}">${t}</div>`; hs = true;
+
+                    m += srvDuracao;
+
+                    if (m >= 60) {
+                        h += Math.floor(m / 60);
+                        m = m % 60;
+                    }
+                }
+                if (!hs) tg.innerHTML = '<small class="text-muted">Indisponível</small>';
+            }
+            addS(config.abertura1, config.fechamento1, mDiv); addS(config.abertura2, config.fechamento2, tDiv);
+        }
+
+        async function finalizarReserva() {
+            const btnConfirmar = document.querySelector('#modalAgendamento .modal-footer .btn-custom') || document.getElementById('btnConfirmar');
+            const formPgto = document.getElementById('selectPagamento').value;
+            if (btnConfirmar) { btnConfirmar.disabled = true; btnConfirmar.innerText = "A processar..."; }
+
+            try {
+                let url = 'http://localhost:8080/api/agendamentos'; let method = 'POST';
+                let bodyData = {
+                    dataHoraInicio: `${dataSel}T${horaSel}:00`,
+                    cliente: { id: user.id, role: 'CLIENTE' },
+                    estabelecimento: { id: estSel.id, role: 'ESTABELECIMENTO' },
+                    servico: { id: parseInt(srvSelId) },
+                    barbeiro: { id: parseInt(barbeiroSelId) },
+                    formaPagamento: formPgto || 'DINHEIRO'
+                };
+
+                if (idReagendamento) {
+                    url = `http://localhost:8080/api/agendamentos/${idReagendamento}/propor-reagendamento`; method = 'PUT';
+                    bodyData = { dataHoraProposta: `${dataSel}T${horaSel}:00`, quemSugeriu: "CLIENTE" };
+                }
+
+                const response = await fetch(url, { method: method, headers: getHeaders(), body: JSON.stringify(bodyData) });
+                if (!response.ok) { const errorData = await response.json(); alert("Erro: " + (errorData.erro || "Horário Indisponível")); return; }
+
+                if (!idReagendamento && formPgto !== 'DINHEIRO') {
+                    const novoAg = await response.json(); await gerarPagamentoAutomatico(novoAg.id);
+                } else { alert(idReagendamento ? "Proposta de novo horário enviada à barbearia!" : "Agendamento confirmado para pagamento no local!"); location.reload(); }
+            } catch (error) { alert("Erro de comunicação."); } finally { if (btnConfirmar && btnConfirmar.innerText === "A processar...") { btnConfirmar.disabled = false; btnConfirmar.innerText = "Confirmar Agendamento"; } }
+        }
+
+        function scrollDatas(distance) {
+            const container = document.getElementById('modalDatas');
+            if (container) {
+                container.scrollBy({
+                    left: distance,
+                    behavior: 'smooth'
+                });
+            }
+        }
     </script>
 </body>
 

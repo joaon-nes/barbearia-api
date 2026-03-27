@@ -29,6 +29,9 @@ public abstract class Usuario {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(unique = true, length = 11)
+    private String cpf;
+
     @NotBlank(message = "O nome é obrigatório")
     private String nome;
 
@@ -61,4 +64,10 @@ public abstract class Usuario {
 
     @Column(columnDefinition = "TEXT")
     private String diasFechados = "";
+
+    @Column(name = "nota_media")
+    private Double notaMedia = 0.0;
+
+    @Column(name = "total_avaliacoes")
+    private Integer totalAvaliacoes = 0;
 }
