@@ -2,6 +2,9 @@ package com.barbearia.api.models;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+
+import java.time.LocalDateTime;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
@@ -49,7 +52,7 @@ public abstract class Usuario {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String codigo2fa;
 
-    @Column(name = "data_expiracao_2fa")
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private java.time.LocalDateTime dataExpiracao2fa;
 
     private Boolean ativo;
@@ -70,4 +73,12 @@ public abstract class Usuario {
 
     @Column(name = "total_avaliacoes")
     private Integer totalAvaliacoes = 0;
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @Column(name = "tentativas_falhas")
+    private Integer tentativasFalhas = 0;
+
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @Column(name = "bloqueado_ate")
+    private LocalDateTime bloqueadoAte;
 }

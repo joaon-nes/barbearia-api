@@ -13,7 +13,6 @@ import com.barbearia.api.models.StatusAgendamento;
 import com.barbearia.api.models.Usuario;
 import com.barbearia.api.services.AgendamentoService;
 import com.barbearia.api.repositories.ServicoRepository;
-import com.barbearia.api.repositories.UsuarioRepository;
 import com.barbearia.api.models.Cliente;
 import com.barbearia.api.models.Estabelecimento;
 import com.barbearia.api.models.Servico;
@@ -28,7 +27,6 @@ public class AgendamentoController {
 
     private final AgendamentoService service;
     private final ServicoRepository servicoRepository;
-    private final UsuarioRepository usuarioRepository;
 
     @Autowired
     private com.barbearia.api.services.PagamentoService pagamentoService;
@@ -60,29 +58,27 @@ public class AgendamentoController {
     @PostMapping
     public ResponseEntity<?> criar(@Valid @RequestBody Agendamento agendamento) {
         try {
-            var servicoCompleto = servicoRepository.findById(agendamento.getServico().getId())
-                    .orElseThrow(() -> new RuntimeException("Serviço não encontrado"));
+            Usuario usuarioLogado = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
-            var usuario = usuarioRepository.findById(agendamento.getCliente().getId())
-                    .orElseThrow(() -> new RuntimeException("Cliente não encontrado"));
-
-            if (!(usuario instanceof Cliente)) {
-                return ResponseEntity.badRequest()
-                        .body(Map.of("erro", "O ID fornecido não pertence a um Cliente válido."));
+            if (!(usuarioLogado instanceof Cliente)) {
+                return ResponseEntity.status(403).body(Map.of("erro", "Apenas clientes podem criar agendamentos."));
             }
 
-            agendamento.setCliente((Cliente) usuario);
+            agendamento.setId(null);
+            agendamento.setCliente((Cliente) usuarioLogado);
+
+            var servicoCompleto = servicoRepository.findById(agendamento.getServico().getId())
+                    .orElseThrow(() -> new IllegalArgumentException("Serviço não encontrado"));
+
             agendamento.setServico(servicoCompleto);
 
             Agendamento novo = service.criar(agendamento);
-
             return ResponseEntity.ok(novo);
 
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(500).body(Map.of("erro", "Erro interno: " + e.getMessage()));
+            throw new RuntimeException("Erro interno ao criar agendamento.", e);
         }
     }
 
@@ -99,13 +95,20 @@ public class AgendamentoController {
                         .body(Map.of("erro", "Acesso negado. Não tem permissão para alterar este agendamento."));
             }
 
-            return service.atualizarStatus(id, StatusAgendamento.valueOf(body.get("status")), usuarioLogado.getId())
+            StatusAgendamento novoStatus = StatusAgendamento.valueOf(body.get("status"));
+
+            if (usuarioLogado instanceof Cliente && novoStatus != StatusAgendamento.CANCELADO) {
+                return ResponseEntity.status(403)
+                        .body(Map.of("erro", "Clientes só têm permissão para CANCELAR agendamentos."));
+            }
+
+            return service.atualizarStatus(id, novoStatus, usuarioLogado.getId())
                     .map(ResponseEntity::ok)
                     .orElse(ResponseEntity.notFound().build());
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("erro", "Erro ao processar no banco: " + e.getMessage()));
+            throw new RuntimeException("Erro ao processar atualização de status no banco.", e);
         }
     }
 
@@ -121,7 +124,11 @@ public class AgendamentoController {
                         .body(Map.of("erro", "Acesso negado. Apenas o cliente dono do agendamento pode avaliá-lo."));
             }
 
-            return service.avaliar(id, Integer.parseInt(body.get("nota").toString()), (String) body.get("comentario"))
+            String comentarioSeguro = body.get("comentario") != null
+                    ? body.get("comentario").toString().replaceAll("<[^>]*>", "")
+                    : null;
+
+            return service.avaliar(id, Integer.parseInt(body.get("nota").toString()), comentarioSeguro)
                     .map(ResponseEntity::ok)
                     .orElse(ResponseEntity.notFound().build());
         } catch (IllegalArgumentException e) {
@@ -141,7 +148,10 @@ public class AgendamentoController {
                         Map.of("erro", "Acesso negado. Apenas o estabelecimento pode responder a esta avaliação."));
             }
 
-            return service.responderAvaliacao(id, body.get("resposta"), usuarioLogado.getId())
+            String respostaSegura = body.get("resposta") != null ? body.get("resposta").replaceAll("<[^>]*>", "")
+                    : null;
+
+            return service.responderAvaliacao(id, respostaSegura, usuarioLogado.getId())
                     .map(ResponseEntity::ok)
                     .orElse(ResponseEntity.notFound().build());
         } catch (IllegalArgumentException e) {
@@ -165,8 +175,10 @@ public class AgendamentoController {
 
             service.eliminar(id);
             return ResponseEntity.noContent().build();
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        } catch (Exception e) {
+            throw new RuntimeException("Erro interno ao eliminar agendamento.", e);
         }
     }
 
@@ -276,19 +288,44 @@ public class AgendamentoController {
 
     @PutMapping("/{id}/reagendar")
     public ResponseEntity<?> reagendar(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        Usuario usuarioLogado = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         try {
+            Agendamento agendamento = service.buscarPorId(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Agendamento não encontrado."));
+
+            boolean isDono = agendamento.getCliente().getId().equals(usuarioLogado.getId());
+            boolean isEstabelecimento = agendamento.getEstabelecimento().getId().equals(usuarioLogado.getId());
+
+            if (!isDono && !isEstabelecimento && !usuarioLogado.getRole().name().equals("ADMIN")) {
+                return ResponseEntity.status(403)
+                        .body(Map.of("erro", "Acesso negado. Você não tem permissão para alterar este agendamento."));
+            }
+
             java.time.LocalDateTime novaData = java.time.LocalDateTime.parse(body.get("dataHoraInicio"));
             return service.reagendar(id, novaData)
                     .map(ResponseEntity::ok)
                     .orElse(ResponseEntity.notFound().build());
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        } catch (Exception e) {
+            throw new RuntimeException("Erro interno ao tentar reagendar.", e);
         }
     }
 
     @PutMapping("/{id}/propor-reagendamento")
     public ResponseEntity<?> proporReagendamento(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        Usuario usuarioLogado = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         try {
+            Agendamento agendamento = service.buscarPorId(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Agendamento não encontrado."));
+
+            boolean isDono = agendamento.getCliente().getId().equals(usuarioLogado.getId());
+            boolean isEstabelecimento = agendamento.getEstabelecimento().getId().equals(usuarioLogado.getId());
+
+            if (!isDono && !isEstabelecimento && !usuarioLogado.getRole().name().equals("ADMIN")) {
+                return ResponseEntity.status(403).body(Map.of("erro", "Acesso negado."));
+            }
+
             String dataHoraStr = body.get("dataHoraProposta").toString();
             if (dataHoraStr.length() > 19) {
                 dataHoraStr = dataHoraStr.substring(0, 19);
@@ -306,18 +343,41 @@ public class AgendamentoController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("erro", "Erro no servidor: " + e.getMessage()));
+            throw new RuntimeException("Erro no servidor ao processar reagendamento.", e);
         }
     }
 
     @PutMapping("/{id}/confirmar-reagendamento")
     public ResponseEntity<?> confirmarReagendamento(@PathVariable Long id) {
+        Usuario usuarioLogado = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         try {
+            Agendamento agendamento = service.buscarPorId(id)
+                    .orElseThrow(() -> new IllegalArgumentException("Agendamento não encontrado."));
+
+            boolean isDono = agendamento.getCliente().getId().equals(usuarioLogado.getId());
+            boolean isEstabelecimento = agendamento.getEstabelecimento().getId().equals(usuarioLogado.getId());
+
+            if (!isDono && !isEstabelecimento && !usuarioLogado.getRole().name().equals("ADMIN")) {
+                return ResponseEntity.status(403).body(Map.of("erro", "Acesso negado."));
+            }
+
+            String autorDaProposta = agendamento.getQuemSugeriuReagendamento();
+            if (usuarioLogado instanceof Cliente && "CLIENTE".equalsIgnoreCase(autorDaProposta)) {
+                return ResponseEntity.status(403)
+                        .body(Map.of("erro", "Você não pode aprovar a sua própria sugestão. Aguarde a barbearia."));
+            }
+            if (usuarioLogado instanceof Estabelecimento && "ESTABELECIMENTO".equalsIgnoreCase(autorDaProposta)) {
+                return ResponseEntity.status(403)
+                        .body(Map.of("erro", "Você não pode aprovar a sua própria sugestão. Aguarde o cliente."));
+            }
+
             return service.confirmarReagendamento(id)
                     .map(ResponseEntity::ok)
                     .orElse(ResponseEntity.notFound().build());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("erro", "Erro no servidor: " + e.getMessage()));
+            throw new RuntimeException("Erro no servidor ao confirmar reagendamento.", e);
         }
     }
 
@@ -337,8 +397,10 @@ public class AgendamentoController {
                     "mensagem",
                     "Dia fechado! " + cancelados + " agendamentos foram cancelados e notificados.",
                     "cancelados", cancelados));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("erro", "Erro ao fechar o dia: " + e.getMessage()));
+            throw new RuntimeException("Erro ao fechar o dia.", e);
         }
     }
 
@@ -354,8 +416,10 @@ public class AgendamentoController {
             java.time.LocalDate data = java.time.LocalDate.parse(body.get("data"));
             service.reabrirDia(estabelecimentoId, data);
             return ResponseEntity.ok(Map.of("mensagem", "Dia reaberto para novos agendamentos!"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("erro", "Erro ao reabrir o dia: " + e.getMessage()));
+            throw new RuntimeException("Erro ao reabrir o dia.", e);
         }
     }
 
@@ -375,8 +439,10 @@ public class AgendamentoController {
             String urlCheckout = pagamentoService.gerarLinkDePagamento(ag);
             return ResponseEntity.ok(Map.of("checkoutUrl", urlCheckout));
 
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        } catch (Exception e) {
+            throw new RuntimeException("Erro ao solicitar pagamento.", e);
         }
     }
 }

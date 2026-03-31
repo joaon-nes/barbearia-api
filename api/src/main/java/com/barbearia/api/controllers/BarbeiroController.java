@@ -4,7 +4,6 @@ import com.barbearia.api.models.Barbeiro;
 import com.barbearia.api.models.Estabelecimento;
 import com.barbearia.api.models.Usuario;
 import com.barbearia.api.repositories.BarbeiroRepository;
-import com.barbearia.api.repositories.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,9 +20,6 @@ public class BarbeiroController {
     @Autowired
     private BarbeiroRepository barbeiroRepository;
 
-    @Autowired
-    private UsuarioRepository usuarioRepository;
-
     private Usuario getUsuarioLogado() {
         return (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     }
@@ -39,13 +35,12 @@ public class BarbeiroController {
     public ResponseEntity<?> criar(@PathVariable Long estabelecimentoId, @RequestBody Barbeiro barbeiro) {
         Usuario usuarioLogado = getUsuarioLogado();
 
-        if (!usuarioLogado.getId().equals(estabelecimentoId)) {
+        if (!usuarioLogado.getId().equals(estabelecimentoId) || !(usuarioLogado instanceof Estabelecimento)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of("erro", "Acesso negado: Você não pode criar barbeiros para outra barbearia."));
+                    .body(Map.of("erro", "Acesso negado: Apenas o dono do estabelecimento pode gerenciar a equipe."));
         }
-
-        Usuario usuario = usuarioRepository.findById(estabelecimentoId).orElseThrow();
-        barbeiro.setEstabelecimento((Estabelecimento) usuario);
+        barbeiro.setId(null);
+        barbeiro.setEstabelecimento((Estabelecimento) usuarioLogado);
         return ResponseEntity.ok(barbeiroRepository.save(barbeiro));
     }
 

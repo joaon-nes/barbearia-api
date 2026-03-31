@@ -44,11 +44,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 Usuario usuario = usuarioRepository.findByEmail(email).orElse(null);
 
-                if (usuario != null) {
+                boolean isBloqueado = usuario != null && usuario.getBloqueadoAte() != null
+                        && java.time.LocalDateTime.now().isBefore(usuario.getBloqueadoAte());
+
+                if (usuario != null && Boolean.TRUE.equals(usuario.getAtivo()) && !isBloqueado) {
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                             usuario, null, Collections.emptyList());
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
+                } else {
+                    System.err.println("[SECURITY] Tentativa de acesso com conta bloqueada/inativa: " + email);
                 }
             }
         }

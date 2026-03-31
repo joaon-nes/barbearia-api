@@ -88,8 +88,9 @@ public class AgendamentoService {
         Servico servico = servicoRepository.findById(agendamento.getServico().getId())
                 .orElseThrow(() -> new IllegalArgumentException("Serviço não encontrado."));
 
-        Usuario usuarioCliente = usuarioRepository.findById(agendamento.getCliente().getId())
+        Usuario usuarioCliente = usuarioRepository.findByIdComBloqueio(agendamento.getCliente().getId())
                 .orElseThrow(() -> new IllegalArgumentException("Cliente não encontrado."));
+
         if (!(usuarioCliente instanceof Cliente)) {
             throw new IllegalArgumentException("O ID informado não pertence a um Cliente válido.");
         }
@@ -270,9 +271,11 @@ public class AgendamentoService {
     @Transactional
     public Optional<Agendamento> atualizarStatus(Long id, StatusAgendamento novoStatus, Long usuarioLogadoId) {
         return repository.findById(id).map(ag -> {
-            if (!ag.getEstabelecimento().getId().equals(usuarioLogadoId)) {
+
+            if (!ag.getEstabelecimento().getId().equals(usuarioLogadoId)
+                    && !ag.getCliente().getId().equals(usuarioLogadoId)) {
                 throw new SecurityException(
-                        "Operação não permitida. Este agendamento pertence a outro estabelecimento.");
+                        "Operação não permitida. Este agendamento não lhe pertence.");
             }
 
             if (ag.getStatus() == StatusAgendamento.CONCLUIDO || ag.getStatus() == StatusAgendamento.CANCELADO) {
@@ -296,6 +299,10 @@ public class AgendamentoService {
 
     @Transactional
     public Optional<Agendamento> avaliar(Long id, Integer nota, String comentario) {
+        if (nota == null || nota < 1 || nota > 5) {
+            throw new IllegalArgumentException("A nota de avaliação deve ser um valor numérico entre 1 e 5.");
+        }
+
         return repository.findById(id).map(ag -> {
             if (ag.getStatus() != StatusAgendamento.CONCLUIDO) {
                 throw new IllegalArgumentException("Apenas serviços concluídos podem ser avaliados.");
@@ -536,6 +543,11 @@ public class AgendamentoService {
 
         if (payload.containsKey("notaCliente") && payload.get("notaCliente") != null) {
             Integer nota = Integer.parseInt(payload.get("notaCliente").toString());
+
+            if (nota < 1 || nota > 5) {
+                throw new IllegalArgumentException("A nota de avaliação deve ser entre 1 e 5.");
+            }
+
             ag.setNotaCliente(nota);
             ag = repository.save(ag);
 

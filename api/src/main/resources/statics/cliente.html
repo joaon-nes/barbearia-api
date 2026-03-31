@@ -418,6 +418,63 @@
             scroll-behavior: smooth;
             -webkit-overflow-scrolling: touch;
         }
+
+        /* localizaçao */
+        .location-wrapper {
+            height: 40px;
+            margin-bottom: 15px;
+        }
+
+        .location-card {
+            position: fixed;
+            top: 65px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 85%;
+            max-width: 380px;
+            padding: 8px 16px;
+            border-radius: 50px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(224, 220, 211, 0.6);
+            z-index: 1020;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .location-card:active {
+            transform: translateX(-50%) scale(0.97);
+        }
+
+        .location-value {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #111827;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding-right: 10px;
+        }
+
+        .btn-location-settings {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: transparent;
+            border: none;
+            color: #374151;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
     </style>
 </head>
 
@@ -430,129 +487,127 @@
             </div>
             <div class="container px-3" style="padding-top: 85px;">
                 <div id="tab-descubra" class="tab-content active">
-                    <div class="card card-custom p-3 mb-4 border-0 shadow-sm d-flex flex-row justify-content-between align-items-center"
-                        style="border-radius: 16px; cursor: pointer;"
+
+                    <div class="location-wrapper"></div>
+
+                    <div id="containerLocalizacao" class="location-card"
                         onclick="new bootstrap.Modal('#modalLocalizacao').show()">
-                        <div>
-                            <small class="text-muted d-block fw-bold"
-                                style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px;">Sua
-                                Localização</small>
-                            <strong class="text-dark" id="lblLocalizacao" style="font-size: 0.95rem;">
-                                <i class="bi bi-geo-alt-fill text-danger me-1"></i> Padrão (Porto Alegre)
-                            </strong>
-                        </div>
-                        <button class="btn btn-sm btn-light border shadow-sm rounded-circle"
-                            style="width: 36px; height: 36px;">
+                        <strong class="location-value" id="lblLocalizacao">
+                            <i class="bi bi-geo-alt-fill text-danger me-1"></i> Localizando...
+                        </strong>
+                        <button class="btn-location-settings">
                             <i class="bi bi-sliders"></i>
                         </button>
                     </div>
+
                     <div id="listaBarbearias"></div>
                 </div>
-                <div id="tab-agenda" class="tab-content">
-                    <h5 class="fw-bold mb-3">Meus Agendamentos</h5>
-                    <h6 class="fw-bold text-muted small mt-3 mb-2">Próximos</h6>
-                    <div id="agsFuturos"></div>
-                    <h6 class="fw-bold text-muted small mt-4 mb-2">Últimos Atendimentos</h6>
-                    <div id="agsUltimos"></div>
-                </div>
-
-                <div id="tab-perfil" class="tab-content">
-                    <div class="card card-custom p-4 text-center mb-3">
-                        <div class="position-relative d-inline-block mx-auto mb-2">
-                            <div class="bg-dark text-white rounded-circle d-flex align-items-center justify-content-center"
-                                style="width: 80px; height: 80px; font-size: 2rem; background-size: cover; background-position: center;"
-                                id="letraAvatar">U</div>
-                            <button class="btn btn-sm btn-light position-absolute bottom-0 end-0 rounded-circle shadow"
-                                onclick="document.getElementById('inputFotoCliente').click()"><i
-                                    class="bi bi-camera"></i></button>
-                            <input type="file" id="inputFotoCliente" accept="image/*" style="display: none;"
-                                onchange="alterarFotoCliente(event)">
-                        </div>
-                        <h5 id="nomePerfil" class="m-0 fw-bold">Usuário</h5>
-                        <p class="text-muted small mb-0" id="emailPerfil"></p>
-                    </div>
-                    <div class="card card-custom p-3 mb-4">
-                        <h6 class="fw-bold mb-3 border-bottom pb-2">Meus Dados</h6>
-                        <div class="mb-2"><label class="small fw-bold">Nome</label><input type="text"
-                                id="editNomeCliente" class="form-control form-control-sm bg-light border-0"></div>
-                        <div class="mb-2"><label class="small fw-bold">Telefone / WhatsApp</label><input type="text"
-                                id="editTelCliente" class="form-control form-control-sm bg-light border-0"></div>
-                        <div class="mb-3"><label class="small fw-bold">CPF</label><input type="text" id="editCpfCliente"
-                                class="form-control form-control-sm bg-light border-0" placeholder="000.000.000-00">
-                        </div>
-
-                        <button class="btn btn-black w-100 mt-2 py-2" onclick="salvarPerfilCliente()">Salvar
-                            Alterações</button>
-                    </div>
-                    <div class="text-center mt-4 mb-2">
-                        <button onclick="logout()" class="btn btn-gray px-4"><i class="bi bi-box-arrow-right me-1"></i>
-                            Sair da Conta</button>
-                    </div>
-                </div>
-
             </div>
-            <div class="bottom-nav">
-                <div class="nav-item active" onclick="mudarAba('descubra', this)"><i
-                        class="bi bi-compass fs-4"></i><span>Explorar</span></div>
-                <div class="nav-item position-relative" onclick="mudarAba('agenda', this)">
-                    <i class="bi bi-calendar-check fs-4"></i><span>Agendamentos</span>
-                    <span id="badgeAgendamentosCliente"
-                        class="position-absolute top-0 start-50 translate-middle badge rounded-pill bg-danger"
-                        style="display: none; font-size: 0.6rem;">0</span>
+            <div id="tab-agenda" class="tab-content">
+                <h5 class="fw-bold mb-3">Meus Agendamentos</h5>
+                <h6 class="fw-bold text-muted small mt-3 mb-2">Próximos</h6>
+                <div id="agsFuturos"></div>
+                <h6 class="fw-bold text-muted small mt-4 mb-2">Últimos Atendimentos</h6>
+                <div id="agsUltimos"></div>
+            </div>
+
+            <div id="tab-perfil" class="tab-content">
+                <div class="card card-custom p-4 text-center mb-3">
+                    <div class="position-relative d-inline-block mx-auto mb-2">
+                        <div class="bg-dark text-white rounded-circle d-flex align-items-center justify-content-center"
+                            style="width: 80px; height: 80px; font-size: 2rem; background-size: cover; background-position: center;"
+                            id="letraAvatar">U</div>
+                        <button class="btn btn-sm btn-light position-absolute bottom-0 end-0 rounded-circle shadow"
+                            onclick="document.getElementById('inputFotoCliente').click()"><i
+                                class="bi bi-camera"></i></button>
+                        <input type="file" id="inputFotoCliente" accept="image/*" style="display: none;"
+                            onchange="alterarFotoCliente(event)">
+                    </div>
+                    <h5 id="nomePerfil" class="m-0 fw-bold">Usuário</h5>
+                    <p class="text-muted small mb-0" id="emailPerfil"></p>
                 </div>
-                <div class="nav-item" onclick="mudarAba('perfil', this)"><i
-                        class="bi bi-person fs-4"></i><span>Perfil</span></div>
+                <div class="card card-custom p-3 mb-4">
+                    <h6 class="fw-bold mb-3 border-bottom pb-2">Meus Dados</h6>
+                    <div class="mb-2"><label class="small fw-bold">Nome</label><input type="text" id="editNomeCliente"
+                            class="form-control form-control-sm bg-light border-0"></div>
+                    <div class="mb-2"><label class="small fw-bold">Telefone / WhatsApp</label><input type="text"
+                            id="editTelCliente" class="form-control form-control-sm bg-light border-0"></div>
+                    <div class="mb-3"><label class="small fw-bold">CPF</label><input type="text" id="editCpfCliente"
+                            class="form-control form-control-sm bg-light border-0" placeholder="000.000.000-00">
+                    </div>
+
+                    <button class="btn btn-black w-100 mt-2 py-2" onclick="salvarPerfilCliente()">Salvar
+                        Alterações</button>
+                </div>
+                <div class="text-center mt-4 mb-2">
+                    <button onclick="logout()" class="btn btn-gray px-4"><i class="bi bi-box-arrow-right me-1"></i>
+                        Sair da Conta</button>
+                </div>
+            </div>
+
+        </div>
+        <div class="bottom-nav">
+            <div class="nav-item active" onclick="mudarAba('descubra', this)"><i
+                    class="bi bi-compass fs-4"></i><span>Explorar</span></div>
+            <div class="nav-item position-relative" onclick="mudarAba('agenda', this)">
+                <i class="bi bi-calendar-check fs-4"></i><span>Agendamentos</span>
+                <span id="badgeAgendamentosCliente"
+                    class="position-absolute top-0 start-50 translate-middle badge rounded-pill bg-danger"
+                    style="display: none; font-size: 0.6rem;">0</span>
+            </div>
+            <div class="nav-item" onclick="mudarAba('perfil', this)"><i
+                    class="bi bi-person fs-4"></i><span>Perfil</span>
             </div>
         </div>
+    </div>
 
-        <div id="view-barbearia">
-            <div class="capa" id="capaBar">
-                <button onclick="fecharBarbearia()" class="btn-back"><i class="bi bi-arrow-left"></i></button>
-            </div>
-            <div class="container p-4" style="margin-top: -40px;">
-                <div class="card card-custom p-4 shadow-sm mb-4">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <h4 class="fw-bold text-primary-custom mb-0" id="nomeBar">Barbearia</h4>
-                        <div id="badgeEstrelasTopo" style="display: none;"></div>
-                    </div>
-                    <div class="d-flex align-items-center justify-content-between pt-3 border-top mt-3">
-                        <div class="d-flex align-items-center"><i
-                                class="bi bi-whatsapp fs-5 text-success me-2"></i><span id="telBar" class="text-muted"
-                                style="font-size: 0.95rem;"></span></div>
-                        <div id="sociaisBar" class="d-flex gap-2"></div>
-                    </div>
-                </div>
-                <h6 class="fw-bold mb-3">Serviços</h6>
-                <div class="card card-custom p-3 shadow-sm mb-4">
-                    <div id="listaServicos"></div>
-                    <button onclick="abrirModalAgendamento()" class="btn btn-black w-100 mt-3 py-2"><i
-                            class="bi bi-calendar-plus me-2"></i> Agendar Horário</button>
-                </div>
-                <div id="sectionComodidades" style="display: none;">
-                    <h6 class="fw-bold mb-3">Este espaço oferece</h6>
-                    <div class="d-flex flex-wrap gap-2 mb-4" id="listaComodidades"></div>
-                </div>
-                <div class="card card-custom p-3 shadow-sm mb-4">
-                    <h6 class="fw-bold"><i class="bi bi-geo-alt"></i> Localização</h6>
-                    <p class="small text-muted mb-2" id="textoEnderecoBarbearia"></p>
-
-                    <div id="mapaInline" onclick="abrirModalMapa()"
-                        style="height: 150px; width: 100%; border-radius: 12px; z-index: 1; cursor: pointer; border: 1px solid #ddd;"
-                        title="Clique para ampliar"></div>
-
-                    <div class="d-flex gap-2 mt-3">
-                        <button onclick="abrirModalMapa()" class="btn btn-gray w-50"> Ampliar</button>
-                        <a id="btnUberInline" href="#" target="_blank" class="btn btn-black w-50"> Pedir Uber</a>
-                    </div>
-                </div>
-                <h6 class="fw-bold mb-3">Galeria</h6>
-                <div class="d-flex overflow-x-auto gap-2 pb-2 mb-4" id="galeriaBar"></div>
-                <h6 class="fw-bold mb-3" id="tituloAvaliacoesBar">Avaliações</h6>
-                <div class="mb-5 pb-5" id="avaliacoesBar"></div>
-                <button id="btnVoltarTopo" onclick="voltarAoTopo()" title="Voltar ao topo"><i
-                        class="bi bi-arrow-up-short"></i></button>
-            </div>
+    <div id="view-barbearia">
+        <div class="capa" id="capaBar">
+            <button onclick="fecharBarbearia()" class="btn-back"><i class="bi bi-arrow-left"></i></button>
         </div>
+        <div class="container p-4" style="margin-top: -40px;">
+            <div class="card card-custom p-4 shadow-sm mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h4 class="fw-bold text-primary-custom mb-0" id="nomeBar">Barbearia</h4>
+                    <div id="badgeEstrelasTopo" style="display: none;"></div>
+                </div>
+                <div class="d-flex align-items-center justify-content-between pt-3 border-top mt-3">
+                    <div class="d-flex align-items-center"><i class="bi bi-whatsapp fs-5 text-success me-2"></i><span
+                            id="telBar" class="text-muted" style="font-size: 0.95rem;"></span></div>
+                    <div id="sociaisBar" class="d-flex gap-2"></div>
+                </div>
+            </div>
+            <h6 class="fw-bold mb-3">Serviços</h6>
+            <div class="card card-custom p-3 shadow-sm mb-4">
+                <div id="listaServicos"></div>
+                <button onclick="abrirModalAgendamento()" class="btn btn-black w-100 mt-3 py-2"><i
+                        class="bi bi-calendar-plus me-2"></i> Agendar Horário</button>
+            </div>
+            <div id="sectionComodidades" style="display: none;">
+                <h6 class="fw-bold mb-3">Este espaço oferece</h6>
+                <div class="d-flex flex-wrap gap-2 mb-4" id="listaComodidades"></div>
+            </div>
+            <div class="card card-custom p-3 shadow-sm mb-4">
+                <h6 class="fw-bold"><i class="bi bi-geo-alt"></i> Localização</h6>
+                <p class="small text-muted mb-2" id="textoEnderecoBarbearia"></p>
+
+                <div id="mapaInline" onclick="abrirModalMapa()"
+                    style="height: 150px; width: 100%; border-radius: 12px; z-index: 1; cursor: pointer; border: 1px solid #ddd;"
+                    title="Clique para ampliar"></div>
+
+                <div class="d-flex gap-2 mt-3">
+                    <button onclick="abrirModalMapa()" class="btn btn-gray w-50"> Ampliar</button>
+                    <a id="btnUberInline" href="#" target="_blank" class="btn btn-black w-50"> Pedir Uber</a>
+                </div>
+            </div>
+            <h6 class="fw-bold mb-3">Galeria</h6>
+            <div class="d-flex overflow-x-auto gap-2 pb-2 mb-4" id="galeriaBar"></div>
+            <h6 class="fw-bold mb-3" id="tituloAvaliacoesBar">Avaliações</h6>
+            <div class="mb-5 pb-5" id="avaliacoesBar"></div>
+            <button id="btnVoltarTopo" onclick="voltarAoTopo()" title="Voltar ao topo"><i
+                    class="bi bi-arrow-up-short"></i></button>
+        </div>
+    </div>
     </div>
 
     <div class="modal fade" id="modalAgendamento" tabindex="-1">
@@ -827,6 +882,9 @@
             const agsFuturosData = meus.filter(m => m.status === 'AGENDADO' || m.status === 'PENDENTE_PAGAMENTO' || m.status === 'REAGENDAMENTO_PENDENTE');
             const agsUltimosData = meus.filter(m => m.status !== 'AGENDADO' && m.status !== 'PENDENTE_PAGAMENTO' && m.status !== 'REAGENDAMENTO_PENDENTE');
 
+            agsFuturosData.sort((a, b) => new Date(a.dataHoraInicio) - new Date(b.dataHoraInicio));
+            agsUltimosData.sort((a, b) => new Date(b.dataHoraInicio) - new Date(a.dataHoraInicio));
+
             const pendentes = meus.filter(m => m.status === 'REAGENDAMENTO_PENDENTE' && m.quemSugeriuReagendamento === 'ESTABELECIMENTO');
             const badge = document.getElementById('badgeAgendamentosCliente');
             if (badge) { badge.innerText = pendentes.length; badge.style.display = pendentes.length > 0 ? 'block' : 'none'; }
@@ -1059,22 +1117,27 @@
                 const resAv = await fetch(`http://localhost:8080/api/agendamentos/estabelecimento/${id}`, { headers: getHeaders() });
                 if (resAv.ok) {
                     const shopAgs = await resAv.json();
-                    agsOcupados = shopAgs.filter(a => a.status === 'AGENDADO' || a.status === 'PENDENTE_PAGAMENTO' || a.status === 'REAGENDAMENTO_PENDENTE');
-                    let avs = shopAgs.filter(a => a.notaAvaliacao != null).sort((a, b) => new Date(b.dataAvaliacao || b.dataHoraInicio) - new Date(a.dataAvaliacao || a.dataHoraInicio));
+                    agsOcupados = shopAgs.filter(a => a.status === 'AGENDADO' || a.status === 'PENDENTE_PAGAMENTO' || a.status === 'REAGENDAMENTO_PENDENTE' || a.status === 'CONCLUIDO');
+                    let avsTotal = shopAgs.filter(a => a.notaAvaliacao != null).sort((a, b) => new Date(b.dataAvaliacao || b.dataHoraInicio) - new Date(a.dataAvaliacao || a.dataHoraInicio));
 
-                    if (avs.length > 0) {
-                        let soma = avs.reduce((acc, curr) => acc + curr.notaAvaliacao, 0);
-                        let media = (soma / avs.length).toFixed(1);
+                    if (avsTotal.length > 0) {
+                        let soma = avsTotal.reduce((acc, curr) => acc + curr.notaAvaliacao, 0);
+                        let media = (soma / avsTotal.length).toFixed(1);
                         let topBadge = document.getElementById('badgeEstrelasTopo');
-                        topBadge.innerHTML = `<span class="fw-bold"><i class="bi bi-star-fill text-warning"></i> ${media} <span class="text-muted fw-normal small">(${avs.length})</span></span>`;
+                        topBadge.innerHTML = `<span class="fw-bold"><i class="bi bi-star-fill text-warning"></i> ${media} <span class="text-muted fw-normal small">(${avsTotal.length})</span></span>`;
                         topBadge.style.display = 'block';
                     } else {
                         document.getElementById('badgeEstrelasTopo').style.display = 'none';
                     }
 
+                    let avsComComentario = avsTotal.filter(a => a.comentarioAvaliacao && a.comentarioAvaliacao.trim() !== '');
                     let avDiv = document.getElementById('avaliacoesBar');
-                    if (avs.length > 0) {
-                        avDiv.innerHTML = avs.map(a => {
+
+                    if (avsComComentario.length > 0) {
+                        let limitados = avsComComentario.slice(0, 8);
+                        let ocultos = avsComComentario.slice(8);
+
+                        const renderAvaliacao = (a) => {
                             let badgeVerificado = a.cliente?.contaVerificada ? ' <i class="bi bi-patch-check-fill text-primary" title="Verificado"></i>' : '';
                             let dAvaliacao = formatarDataRelativa(a.dataAvaliacao || a.dataHoraInicio);
                             let respostaHTML = a.respostaAvaliacao ? `<div class="bg-light p-3 mt-3 rounded-3 border-3 border-primary"><div class="d-flex justify-content-between align-items-center mb-1"><strong class="small">${estSel.nomeBarbearia}</strong><small class="text-muted" style="font-size:0.65rem;">${formatarDataRelativa(a.dataResposta)}</small></div><p class="small text-muted m-0">${a.respostaAvaliacao}</p></div>` : '';
@@ -1088,10 +1151,20 @@
                                     <p class="small m-0 mt-2">${a.comentarioAvaliacao}</p>
                                     ${respostaHTML}
                                 </div>`;
-                        }).join('');
-                    } else { avDiv.innerHTML = '<p class="small text-muted m-0">Ainda não há avaliações.</p>'; }
+                        };
+
+                        avDiv.innerHTML = limitados.map(renderAvaliacao).join('');
+
+                        if (ocultos.length > 0) {
+                            let htmlOculto = '<div id="avaliacoesOcultas" style="display:none;">' + ocultos.map(renderAvaliacao).join('') + '</div>';
+                            avDiv.innerHTML += htmlOculto;
+                            avDiv.innerHTML += `<button id="btnToggleAvaliacoes" onclick="toggleAvaliacoes()" class="btn btn-light w-100 rounded-pill text-muted small shadow-sm mt-3 mb-2"><i class="bi bi-chevron-down"></i> Ver mais avaliações</button>`;
+                        }
+                    } else {
+                        avDiv.innerHTML = '<p class="small text-muted m-0">Ainda não há avaliações com comentários.</p>';
+                    }
                 }
-            } catch (e) { }
+            } catch (e) { console.error("Erro ao carregar avaliações", e); }
         }
 
         function fecharBarbearia() { document.getElementById('view-barbearia').style.display = 'none'; document.getElementById('main-view').style.display = 'block'; }
@@ -1161,7 +1234,20 @@
 
         async function aceitarProposta(id) { await fetch(`http://localhost:8080/api/agendamentos/${id}/confirmar-reagendamento`, { method: 'PUT', headers: getHeaders() }); alert("Horário confirmado!"); location.reload(); }
 
-        function verificarScroll() { const btnTopo = document.getElementById("btnVoltarTopo"); if (!btnTopo) return; const appContainer = document.querySelector('.app-container'); let scrollPos = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || (appContainer ? appContainer.scrollTop : 0); if (scrollPos > 300) { btnTopo.classList.add("mostrar"); } else { btnTopo.classList.remove("mostrar"); } }
+        function verificarScroll() {
+            const btnTopo = document.getElementById("btnVoltarTopo");
+            const appContainer = document.querySelector('.app-container');
+            let scrollPos = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || (appContainer ? appContainer.scrollTop : 0);
+
+            if (btnTopo) {
+                if (scrollPos > 300) {
+                    btnTopo.classList.add("mostrar");
+                } else {
+                    btnTopo.classList.remove("mostrar");
+                }
+            }
+        }
+
         window.addEventListener('scroll', verificarScroll, { passive: true }); document.addEventListener('scroll', verificarScroll, { passive: true }); document.body.addEventListener('scroll', verificarScroll, { passive: true }); const caixaApp = document.querySelector('.app-container'); if (caixaApp) caixaApp.addEventListener('scroll', verificarScroll, { passive: true });
         function voltarAoTopo() { window.scrollTo({ top: 0, behavior: 'smooth' }); document.documentElement.scrollTo({ top: 0, behavior: 'smooth' }); document.body.scrollTo({ top: 0, behavior: 'smooth' }); if (caixaApp) caixaApp.scrollTo({ top: 0, behavior: 'smooth' }); }
 
@@ -1245,6 +1331,21 @@
                 alert("Erro ao buscar a localização. Tente novamente.");
             } finally {
                 btnBusca.innerHTML = '<i class="bi bi-search"></i>';
+            }
+        }
+
+        function toggleAvaliacoes() {
+            const divOculta = document.getElementById('avaliacoesOcultas');
+            const btn = document.getElementById('btnToggleAvaliacoes');
+
+            if (divOculta.style.display === 'none') {
+                divOculta.style.display = 'block';
+                btn.innerHTML = '<i class="bi bi-chevron-up"></i> Ocultar avaliações';
+            } else {
+                divOculta.style.display = 'none';
+                btn.innerHTML = '<i class="bi bi-chevron-down"></i> Ver mais avaliações';
+
+                document.getElementById('tituloAvaliacoesBar').scrollIntoView({ behavior: 'smooth' });
             }
         }
 
@@ -1494,7 +1595,12 @@
                 if (!idReagendamento && formPgto !== 'DINHEIRO') {
                     const novoAg = await response.json(); await gerarPagamentoAutomatico(novoAg.id);
                 } else { alert(idReagendamento ? "Proposta de novo horário enviada à barbearia!" : "Agendamento confirmado para pagamento no local!"); location.reload(); }
-            } catch (error) { alert("Erro de comunicação."); } finally { if (btnConfirmar && btnConfirmar.innerText === "A processar...") { btnConfirmar.disabled = false; btnConfirmar.innerText = "Confirmar Agendamento"; } }
+            } catch (error) { alert("Erro de comunicação."); }
+            finally {
+                if (btnConfirmar && btnConfirmar.innerText === "A processar...") {
+                    btnConfirmar.disabled = false; btnConfirmar.innerText = "Confirmar Agendamento";
+                }
+            }
         }
 
         function scrollDatas(distance) {

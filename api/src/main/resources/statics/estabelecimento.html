@@ -862,7 +862,7 @@
 
                 let formPgtoBadge = '';
                 if (ag.formaPagamento === 'DINHEIRO') {
-                    formPgtoBadge = '<span class="badge bg-light text-dark border mt-1" style="font-size: 0.65rem;"><i class="bi bi-cash"></i> Local</span>';
+                    formPgtoBadge = '<span class="badge bg-light text-dark border mt-1" style="font-size: 0.65rem;">Dinheiro</span>';
                 } else if (ag.statusPagamento === 'PAGO') {
                     formPgtoBadge = '<span class="badge mt-1" style="font-size: 0.65rem; background-color: #111827;"><i class="bi bi-check-circle"></i> Pago (Online)</span>';
                 } else if ((ag.formaPagamento === 'PIX' || ag.formaPagamento === 'CARTAO') && ag.status !== 'CANCELADO' && ag.status !== 'CONCLUIDO') {

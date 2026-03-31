@@ -26,23 +26,35 @@ public class SecurityConfig {
                 return new BCryptPasswordEncoder();
         }
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthFilter)
-            throws Exception {
-        http
-                .cors(Customizer.withDefaults())
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.POST, "/api/usuarios", "/api/usuarios/login", "/api/usuarios/validar-2fa").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/servicos/estabelecimento/**", "/api/usuarios/estabelecimentos/proximos").permitAll()
-                .requestMatchers("/api/webhooks/**").permitAll()
-                .anyRequest().authenticated()
-            )
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+        @Bean
+        public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthFilter)
+                        throws Exception {
+                http
+                                .cors(Customizer.withDefaults())
+                                .csrf(csrf -> csrf.disable())
 
-        return http.build();
-    }
+                                .headers(headers -> headers
+                                                .frameOptions(frame -> frame.deny())
+                                                .xssProtection(xss -> xss.headerValue(
+                                                                org.springframework.security.web.header.writers.XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK))
+                                                .contentSecurityPolicy(
+                                                                csp -> csp.policyDirectives("default-src 'self'")))
+
+                                .sessionManagement(session -> session
+                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                                .authorizeHttpRequests(auth -> auth
+                                                .requestMatchers(HttpMethod.POST, "/api/usuarios",
+                                                                "/api/usuarios/login", "/api/usuarios/validar-2fa")
+                                                .permitAll()
+                                                .requestMatchers(HttpMethod.GET, "/api/servicos/estabelecimento/**",
+                                                                "/api/usuarios/estabelecimentos/proximos")
+                                                .permitAll()
+                                                .requestMatchers("/api/webhooks/**").permitAll()
+                                                .anyRequest().authenticated())
+                                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
+                return http.build();
+        }
 
         @Bean
         public CorsConfigurationSource corsConfigurationSource() {

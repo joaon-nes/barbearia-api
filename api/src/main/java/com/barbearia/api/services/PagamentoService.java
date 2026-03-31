@@ -16,7 +16,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 @Service
 public class PagamentoService {
 
-    @Value("${abacatepay.api.key:abc_dev_qmkr1XdEqXqF1rr6XsSR0K6H}")
+    @Value("${abacatepay.api.key}")
     private String apiKey;
 
     @Value("${app.frontend.url:http://127.0.0.1:5500/api/src/main/resources/statics/cliente.html}")

@@ -15,7 +15,9 @@ import org.springframework.web.bind.annotation.*;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Base64;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/webhooks")
@@ -30,23 +32,19 @@ public class WebhookController {
 
     @PostMapping("/abacatepay")
     public ResponseEntity<?> receberWebhook(HttpServletRequest request) {
-
         try {
             byte[] rawPayload = request.getInputStream().readAllBytes();
 
             String signature = request.getHeader("X-Webhook-Signature");
-            if (signature == null)
+            if (signature == null) {
                 signature = request.getHeader("x-webhook-signature");
+            }
 
-            String headerSecret = request.getHeader("X-Webhook-Secret");
-            if (headerSecret == null)
-                headerSecret = request.getHeader("x-webhook-secret");
+            boolean assinaturaValida = isAssinaturaValida(rawPayload, signature, webhookSecret);
 
-            boolean mathValida = isAssinaturaValida(rawPayload, signature, webhookSecret);
-            boolean segredoValido = webhookSecret.equals(headerSecret);
-
-            if (!mathValida && !segredoValido) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Acesso negado");
+            if (!assinaturaValida) {
+                System.err.println("[SECURITY WARN] Webhook recebido com assinatura inválida. IP suspeito.");
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
             }
 
             JsonNode rootNode = mapper.readTree(rawPayload);
@@ -84,8 +82,12 @@ public class WebhookController {
 
             return ResponseEntity.ok().build();
         } catch (Exception e) {
-            System.err.println("Erro interno: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            String correlationId = java.util.UUID.randomUUID().toString();
+
+            System.err.println("[ERROR] Webhook falhou. Ref: " + correlationId + " | Erro: " + e.getMessage());
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("erro", "Ocorreu um erro interno. Referência: " + correlationId));
         }
     }
 
@@ -97,13 +99,13 @@ public class WebhookController {
             SecretKeySpec secretKey = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
             hmacSha256.init(secretKey);
 
-            byte[] hash = hmacSha256.doFinal(payload);
-            String calculada = Base64.getEncoder().encodeToString(hash);
+            byte[] hashCalculado = hmacSha256.doFinal(payload);
+            byte[] hashRecebido = Base64.getDecoder().decode(headerSignature);
 
-            if (calculada.equals(headerSignature)) {
+            if (MessageDigest.isEqual(hashCalculado, hashRecebido)) {
                 return true;
             } else {
-                System.out.println("-> Criptografia calculada não coincidiu.");
+                System.err.println("[SECURITY] Criptografia calculada não coincidiu com a assinatura do Webhook.");
                 return false;
             }
         } catch (Exception e) {
