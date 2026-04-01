@@ -152,7 +152,7 @@
 
             try {
                 const token = localStorage.getItem('token');
-                const response = await fetch(`http://localhost:8080/api/usuarios/${usuarioAtual.id}/completar-perfil`, {
+                const response = await fetch(`/api/usuarios/${usuarioAtual.id}/completar-perfil`, {
                     method: 'PUT',
                     headers: { 
                         'Content-Type': 'application/json',

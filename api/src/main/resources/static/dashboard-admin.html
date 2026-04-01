@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barbearia - Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #F8F6F0;
+            color: #333333;
+        }
+
+        .navbar-custom {
+            background-color: #111827;
+            border-bottom: 3px solid #e0dcd3;
+        }
+
+        .navbar-brand,
+        .nav-text {
+            color: #F8F6F0 !important;
+        }
+
+        .card-custom {
+            background-color: #ffffff;
+            border: 1px solid #e0dcd3;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .text-primary-custom {
+            color: #111827;
+        }
+
+        .btn-outline-custom {
+            border: 1px solid #111827;
+            color: #111827;
+            border-radius: 20px;
+            transition: 0.3s;
+        }
+
+        .btn-outline-custom:hover {
+            background-color: #111827;
+            color: #ffffff;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-custom p-3">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="#">⚙️ Painel do Admin</a>
+            <div class="d-flex align-items-center">
+                <span id="nomeAdminMaster" class="me-3 nav-text fw-bold"></span>
+                <button onclick="logout()"
+                    class="btn btn-light btn-sm rounded-pill text-primary-custom fw-bold px-3">Sair</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <h3 class="mb-4 text-primary-custom fw-bold">Visão Global</h3>
+        <div class="row g-4 text-center">
+            <div class="col-md-6">
+                <div class="card card-custom p-4 h-100">
+                    <h5 class="text-muted">Total de Clientes</h5>
+                    <h1 class="mt-2 text-primary-custom fw-bold" id="qtdClientes">0</h1>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card card-custom p-4 h-100">
+                    <h5 class="text-muted">Estabelecimentos Aprovados</h5>
+                    <h1 class="mt-2 text-success fw-bold" id="qtdEstabelecimentos">0</h1>
+                </div>
+            </div>
+        </div>
+
+        <h4 class="mt-5 mb-3 text-primary-custom fw-bold"><i class="bi bi-shield-lock"></i> Solicitações Pendentes</h4>
+        <div class="card card-custom p-0 overflow-hidden mb-5">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Nome / Barbearia</th>
+                        <th>Email</th>
+                        <th>Cidade</th>
+                        <th>Status do Perfil</th>
+                        <th class="text-end">Ação</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaPendentes">
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-4">Carregando solicitações...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const usuarioAtual = JSON.parse(localStorage.getItem('usuarioLogado'));
+        if (!usuarioAtual || usuarioAtual.role !== 'ADMIN') { window.location.href = 'login.html'; }
+        else { document.getElementById('nomeAdminMaster').innerText = `${usuarioAtual.nome} (Admin)`; }
+
+        function getHeaders() {
+            const token = localStorage.getItem('token');
+            return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+        }
+
+        function logout() { localStorage.removeItem('usuarioLogado'); localStorage.removeItem('token'); window.location.href = 'login.html'; }
+
+        async function carregarDados() {
+            const resStats = await fetch('/api/usuarios', { headers: getHeaders() });
+            if (resStats.ok) {
+                const usuarios = await resStats.json();
+                document.getElementById('qtdClientes').innerText = usuarios.filter(u => u.role === 'CLIENTE').length;
+                document.getElementById('qtdEstabelecimentos').innerText = usuarios.filter(u => u.role === 'ESTABELECIMENTO' && u.verificadoAdmin).length;
+            }
+
+            // Carrega Pendentes
+            const resPendentes = await fetch('/api/usuarios/estabelecimentos/pendentes', { headers: getHeaders() });
+            if (resPendentes.ok) {
+                const pendentes = await resPendentes.json();
+                const tbody = document.getElementById('tabelaPendentes');
+                tbody.innerHTML = '';
+
+                if (pendentes.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-4">Nenhuma solicitação pendente.</td></tr>';
+                    return;
+                }
+
+                pendentes.forEach(p => {
+                    let statusBadge = p.perfilCompleto
+                        ? '<span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split"></i> Aguardando Aprovação</span>'
+                        : '<span class="badge bg-secondary"><i class="bi bi-pencil-square"></i> Preenchendo Perfil...</span>';
+
+                    let btnAprovar = p.perfilCompleto
+                        ? `<button onclick="aprovar(${p.id}, this)" class="btn btn-sm btn-success fw-bold px-3">Aprovar Parceiro</button>`
+                        : `<button disabled class="btn btn-sm btn-outline-secondary px-3">Incompleto</button>`;
+
+                    tbody.innerHTML += `
+                        <tr>
+                            <td class="fw-bold">${p.nome}</td>
+                            <td class="text-muted small">${p.email}</td>
+                            <td>${p.cidade}</td>
+                            <td>${statusBadge}</td>
+                            <td class="text-end">${btnAprovar}</td>
+                        </tr>
+                    `;
+                });
+            }
+        }
+
+        async function aprovar(id, btn) {
+            if (!confirm("Tem certeza que deseja aprovar e tornar esta barbearia pública?")) return;
+            btn.disabled = true; btn.innerText = "Aprovando...";
+            const res = await fetch(`/api/usuarios/estabelecimentos/${id}/aprovar`, { method: 'PUT', headers: getHeaders() });
+            if (res.ok) { alert("Estabelecimento aprovado com sucesso!"); carregarDados(); }
+            else { alert("Erro ao aprovar."); btn.disabled = false; btn.innerText = "Aprovar Parceiro"; }
+        }
+
+        carregarDados();
+    </script>
+</body>
+
+</html>

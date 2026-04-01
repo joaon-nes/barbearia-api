@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Barber App - Cliente</title>
+    <link rel="icon" href="data:,">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -420,34 +421,28 @@
         }
 
         /* localizaçao */
-        .location-wrapper {
-            height: 40px;
-            margin-bottom: 15px;
-        }
 
         .location-card {
-            position: fixed;
-            top: 65px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 85%;
-            max-width: 380px;
-            padding: 8px 16px;
+            position: sticky;
+            top: 85px;
+            width: 100%;
+            padding: 10px 20px;
             border-radius: 50px;
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
             border: 1px solid rgba(224, 220, 211, 0.6);
             z-index: 1020;
             display: flex;
             justify-content: space-between;
             align-items: center;
             cursor: pointer;
+            margin-bottom: 20px;
             transition: transform 0.2s;
         }
 
         .location-card:active {
-            transform: translateX(-50%) scale(0.97);
+            transform: scale(0.97);
         }
 
         .location-value {
@@ -482,7 +477,9 @@
     <div class="app-container">
         <div id="main-view">
             <div class="navbar-custom d-flex justify-content-between align-items-center">
-                <h5 class="m-0 fw-bold">💈 Barber Discovery</h5>
+                <h5 class="m-0 fw-bold" style="letter-spacing: 0.5px; font-family: 'Georgia', serif;">
+                    The Barber<sup style="font-size: 0.6em; margin-left: 2px;">&reg;</sup>
+                </h5>
                 <div id="headerAuth"></div>
             </div>
             <div class="container px-3" style="padding-top: 85px;">
@@ -546,6 +543,7 @@
             </div>
 
         </div>
+
         <div class="bottom-nav">
             <div class="nav-item active" onclick="mudarAba('descubra', this)"><i
                     class="bi bi-compass fs-4"></i><span>Explorar</span></div>
@@ -559,57 +557,57 @@
                     class="bi bi-person fs-4"></i><span>Perfil</span>
             </div>
         </div>
-    </div>
 
-    <div id="view-barbearia">
-        <div class="capa" id="capaBar">
-            <button onclick="fecharBarbearia()" class="btn-back"><i class="bi bi-arrow-left"></i></button>
+        <div id="view-barbearia">
+            <div class="capa" id="capaBar">
+                <button onclick="fecharBarbearia()" class="btn-back"><i class="bi bi-arrow-left"></i></button>
+            </div>
+            <div class="container p-4" style="margin-top: -40px;">
+                <div class="card card-custom p-4 shadow-sm mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h4 class="fw-bold text-primary-custom mb-0" id="nomeBar">Barbearia</h4>
+                        <div id="badgeEstrelasTopo" style="display: none;"></div>
+                    </div>
+                    <div class="d-flex align-items-center justify-content-between pt-3 border-top mt-3">
+                        <div class="d-flex align-items-center"><i
+                                class="bi bi-whatsapp fs-5 text-success me-2"></i><span id="telBar" class="text-muted"
+                                style="font-size: 0.95rem;"></span></div>
+                        <div id="sociaisBar" class="d-flex gap-2"></div>
+                    </div>
+                </div>
+                <h6 class="fw-bold mb-3">Serviços</h6>
+                <div class="card card-custom p-3 shadow-sm mb-4">
+                    <div id="listaServicos"></div>
+                    <button onclick="abrirModalAgendamento()" class="btn btn-black w-100 mt-3 py-2"><i
+                            class="bi bi-calendar-plus me-2"></i> Agendar Horário</button>
+                </div>
+                <div id="sectionComodidades" style="display: none;">
+                    <h6 class="fw-bold mb-3">Este espaço oferece</h6>
+                    <div class="d-flex flex-wrap gap-2 mb-4" id="listaComodidades"></div>
+                </div>
+                <div class="card card-custom p-3 shadow-sm mb-4">
+                    <h6 class="fw-bold"><i class="bi bi-geo-alt"></i> Localização</h6>
+                    <p class="small text-muted mb-2" id="textoEnderecoBarbearia"></p>
+
+                    <div id="mapaInline" onclick="abrirModalMapa()"
+                        style="height: 150px; width: 100%; border-radius: 12px; z-index: 1; cursor: pointer; border: 1px solid #ddd;"
+                        title="Clique para ampliar"></div>
+
+                    <div class="d-flex gap-2 mt-3">
+                        <button onclick="abrirModalMapa()" class="btn btn-gray w-50"> Ampliar</button>
+                        <a id="btnUberInline" href="#" target="_blank" class="btn btn-black w-50"> Pedir Uber</a>
+                    </div>
+                </div>
+                <h6 class="fw-bold mb-3">Galeria</h6>
+                <div class="d-flex overflow-x-auto gap-2 pb-2 mb-4" id="galeriaBar"></div>
+                <h6 class="fw-bold mb-3" id="tituloAvaliacoesBar">Avaliações</h6>
+                <div class="mb-5 pb-5" id="avaliacoesBar"></div>
+                <button id="btnVoltarTopo" onclick="voltarAoTopo()" title="Voltar ao topo"><i
+                        class="bi bi-arrow-up-short"></i></button>
+            </div>
         </div>
-        <div class="container p-4" style="margin-top: -40px;">
-            <div class="card card-custom p-4 shadow-sm mb-4">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h4 class="fw-bold text-primary-custom mb-0" id="nomeBar">Barbearia</h4>
-                    <div id="badgeEstrelasTopo" style="display: none;"></div>
-                </div>
-                <div class="d-flex align-items-center justify-content-between pt-3 border-top mt-3">
-                    <div class="d-flex align-items-center"><i class="bi bi-whatsapp fs-5 text-success me-2"></i><span
-                            id="telBar" class="text-muted" style="font-size: 0.95rem;"></span></div>
-                    <div id="sociaisBar" class="d-flex gap-2"></div>
-                </div>
-            </div>
-            <h6 class="fw-bold mb-3">Serviços</h6>
-            <div class="card card-custom p-3 shadow-sm mb-4">
-                <div id="listaServicos"></div>
-                <button onclick="abrirModalAgendamento()" class="btn btn-black w-100 mt-3 py-2"><i
-                        class="bi bi-calendar-plus me-2"></i> Agendar Horário</button>
-            </div>
-            <div id="sectionComodidades" style="display: none;">
-                <h6 class="fw-bold mb-3">Este espaço oferece</h6>
-                <div class="d-flex flex-wrap gap-2 mb-4" id="listaComodidades"></div>
-            </div>
-            <div class="card card-custom p-3 shadow-sm mb-4">
-                <h6 class="fw-bold"><i class="bi bi-geo-alt"></i> Localização</h6>
-                <p class="small text-muted mb-2" id="textoEnderecoBarbearia"></p>
 
-                <div id="mapaInline" onclick="abrirModalMapa()"
-                    style="height: 150px; width: 100%; border-radius: 12px; z-index: 1; cursor: pointer; border: 1px solid #ddd;"
-                    title="Clique para ampliar"></div>
-
-                <div class="d-flex gap-2 mt-3">
-                    <button onclick="abrirModalMapa()" class="btn btn-gray w-50"> Ampliar</button>
-                    <a id="btnUberInline" href="#" target="_blank" class="btn btn-black w-50"> Pedir Uber</a>
-                </div>
-            </div>
-            <h6 class="fw-bold mb-3">Galeria</h6>
-            <div class="d-flex overflow-x-auto gap-2 pb-2 mb-4" id="galeriaBar"></div>
-            <h6 class="fw-bold mb-3" id="tituloAvaliacoesBar">Avaliações</h6>
-            <div class="mb-5 pb-5" id="avaliacoesBar"></div>
-            <button id="btnVoltarTopo" onclick="voltarAoTopo()" title="Voltar ao topo"><i
-                    class="bi bi-arrow-up-short"></i></button>
-        </div>
     </div>
-    </div>
-
     <div class="modal fade" id="modalAgendamento" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content rounded-4 border-0 shadow">
@@ -831,7 +829,7 @@
                 const base64 = ev.target.result;
                 document.getElementById('letraAvatar').innerText = '';
                 document.getElementById('letraAvatar').style.backgroundImage = `url(${base64})`;
-                await fetch(`http://localhost:8080/api/usuarios/${user.id}/foto`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ fotoPerfil: base64 }) });
+                await fetch(`/api/usuarios/${user.id}/foto`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ fotoPerfil: base64 }) });
                 user.fotoPerfil = base64; localStorage.setItem('usuarioLogado', JSON.stringify(user));
             };
             reader.readAsDataURL(e.target.files[0]);
@@ -842,7 +840,7 @@
             const tel = document.getElementById('editTelCliente').value;
             const cpf = document.getElementById('editCpfCliente').value;
 
-            await fetch(`http://localhost:8080/api/usuarios/${user.id}/completar-perfil`, {
+            await fetch(`/api/usuarios/${user.id}/completar-perfil`, {
                 method: 'PUT', headers: getHeaders(),
                 body: JSON.stringify({ nome: nome, telefone: tel, cpf: cpf })
             });
@@ -874,7 +872,7 @@
         }
 
         async function carregarMeusAgs() {
-            const res = await fetch('http://localhost:8080/api/agendamentos', { headers: getHeaders() });
+            const res = await fetch('/api/agendamentos', { headers: getHeaders() });
             if (!res.ok) return;
             let meus = await res.json();
             meus.sort((a, b) => new Date(b.dataHoraInicio) - new Date(a.dataHoraInicio));
@@ -1114,7 +1112,7 @@
             } else { galeriaDiv.innerHTML = '<p class="small text-muted m-0">Nenhuma foto.</p>'; }
 
             try {
-                const resAv = await fetch(`http://localhost:8080/api/agendamentos/estabelecimento/${id}`, { headers: getHeaders() });
+                const resAv = await fetch(`/api/agendamentos/estabelecimento/${id}`, { headers: getHeaders() });
                 if (resAv.ok) {
                     const shopAgs = await resAv.json();
                     agsOcupados = shopAgs.filter(a => a.status === 'AGENDADO' || a.status === 'PENDENTE_PAGAMENTO' || a.status === 'REAGENDAMENTO_PENDENTE' || a.status === 'CONCLUIDO');
@@ -1176,7 +1174,7 @@
 
         async function iniciarReagendamento(agId, estId, servId, barbId) {
             idReagendamento = agId; estSel = estCache[estId]; srvSelId = servId; barbeiroSelId = barbId;
-            if (!servCache[estId]) { const resS = await fetch(`http://localhost:8080/api/servicos/estabelecimento/${estId}`, { headers: getHeaders() }); servCache[estId] = await resS.json(); }
+            if (!servCache[estId]) { const resS = await fetch(`/api/servicos/estabelecimento/${estId}`, { headers: getHeaders() }); servCache[estId] = await resS.json(); }
             abrirModalAgendamento(true);
         }
 
@@ -1193,7 +1191,7 @@
         function verificarLiberacaoConfirmar() { document.getElementById('btnConfirmar').disabled = (document.getElementById('selectPagamento').value === ""); }
 
         async function gerarPagamentoAutomatico(agId) {
-            const response = await fetch(`http://localhost:8080/api/agendamentos/${agId}/pagar`, { method: 'POST', headers: getHeaders() });
+            const response = await fetch(`/api/agendamentos/${agId}/pagar`, { method: 'POST', headers: getHeaders() });
             if (response.ok) { const data = await response.json(); window.location.href = data.checkoutUrl; } else { alert("Agendamento criado, mas houve um erro ao redirecionar para o pagamento. Tente novamente na aba Agendamentos."); location.reload(); }
         }
 
@@ -1201,7 +1199,7 @@
             if (!confirm("Deseja realmente cancelar este agendamento?")) return;
 
             try {
-                const response = await fetch(`http://localhost:8080/api/agendamentos/${id}/status`, {
+                const response = await fetch(`/api/agendamentos/${id}/status`, {
                     method: 'PUT',
                     headers: getHeaders(),
                     body: JSON.stringify({ status: 'CANCELADO' })
@@ -1228,11 +1226,11 @@
         async function enviarAvaliacao() {
             let i = document.getElementById('idAgendamentoAvaliar').value; let n = document.getElementById('notaSelecionada').value; let c = document.getElementById('comentarioAvaliacao').value;
             if (n == 0) { alert("Selecione as estrelas!"); return; }
-            await fetch(`http://localhost:8080/api/agendamentos/${i}/avaliar`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ nota: parseInt(n), comentario: c }) });
+            await fetch(`/api/agendamentos/${i}/avaliar`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ nota: parseInt(n), comentario: c }) });
             alert("Enviado!"); location.reload();
         }
 
-        async function aceitarProposta(id) { await fetch(`http://localhost:8080/api/agendamentos/${id}/confirmar-reagendamento`, { method: 'PUT', headers: getHeaders() }); alert("Horário confirmado!"); location.reload(); }
+        async function aceitarProposta(id) { await fetch(`/api/agendamentos/${id}/confirmar-reagendamento`, { method: 'PUT', headers: getHeaders() }); alert("Horário confirmado!"); location.reload(); }
 
         function verificarScroll() {
             const btnTopo = document.getElementById("btnVoltarTopo");
@@ -1254,7 +1252,7 @@
         async function gerarPagamento(agendamentoId, btnElement) {
             btnElement.disabled = true; btnElement.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> A redirecionar...';
             try {
-                const response = await fetch(`http://localhost:8080/api/agendamentos/${agendamentoId}/pagar`, { method: 'POST', headers: getHeaders() });
+                const response = await fetch(`/api/agendamentos/${agendamentoId}/pagar`, { method: 'POST', headers: getHeaders() });
                 if (!response.ok) { const errorData = await response.json(); alert("Erro ao gerar pagamento: " + (errorData.erro || "Desconhecido")); btnElement.disabled = false; btnElement.innerHTML = '<i class="bi bi-credit-card-2-back me-2"></i> Pagar Agora'; return; }
                 const data = await response.json(); window.location.href = data.checkoutUrl;
             } catch (error) { alert("Erro de comunicação com o servidor."); btnElement.disabled = false; btnElement.innerHTML = '<i class="bi bi-credit-card-2-back me-2"></i> Pagar Agora'; }
@@ -1351,7 +1349,7 @@
 
         async function carregarBarbearias() {
             try {
-                const response = await fetch(`http://localhost:8080/api/usuarios/estabelecimentos/proximos?lat=${userLat}&lng=${userLng}&raioKm=50`, { headers: getHeaders() });
+                const response = await fetch(`/api/usuarios/estabelecimentos/proximos?lat=${userLat}&lng=${userLng}&raioKm=50`, { headers: getHeaders() });
                 if (!response.ok) throw new Error("Falha ao buscar estabelecimentos");
 
                 const estabelecimentos = await response.json();
@@ -1371,7 +1369,7 @@
                     estCache[est.id] = est;
 
                     if (!servCache[est.id]) {
-                        try { const resS = await fetch(`http://localhost:8080/api/servicos/estabelecimento/${est.id}`, { headers: getHeaders() }); if (resS.ok) servCache[est.id] = await resS.json(); } catch (e) { }
+                        try { const resS = await fetch(`/api/servicos/estabelecimento/${est.id}`, { headers: getHeaders() }); if (resS.ok) servCache[est.id] = await resS.json(); } catch (e) { }
                     }
 
                     let capa = est.fotoPerfil ? `url('${est.fotoPerfil}')` : '#2C4E80';
@@ -1436,7 +1434,7 @@
                 mostrarAreaServico(true);
             } else {
                 try {
-                    const res = await fetch(`http://localhost:8080/api/barbeiros/estabelecimento/${estSel.id}`, { headers: getHeaders() });
+                    const res = await fetch(`/api/barbeiros/estabelecimento/${estSel.id}`, { headers: getHeaders() });
                     const barbeiros = await res.json();
 
                     if (barbeiros.length === 0) {
@@ -1574,7 +1572,7 @@
             if (btnConfirmar) { btnConfirmar.disabled = true; btnConfirmar.innerText = "A processar..."; }
 
             try {
-                let url = 'http://localhost:8080/api/agendamentos'; let method = 'POST';
+                let url = '/api/agendamentos'; let method = 'POST';
                 let bodyData = {
                     dataHoraInicio: `${dataSel}T${horaSel}:00`,
                     cliente: { id: user.id, role: 'CLIENTE' },
@@ -1585,7 +1583,7 @@
                 };
 
                 if (idReagendamento) {
-                    url = `http://localhost:8080/api/agendamentos/${idReagendamento}/propor-reagendamento`; method = 'PUT';
+                    url = `/api/agendamentos/${idReagendamento}/propor-reagendamento`; method = 'PUT';
                     bodyData = { dataHoraProposta: `${dataSel}T${horaSel}:00`, quemSugeriu: "CLIENTE" };
                 }
 

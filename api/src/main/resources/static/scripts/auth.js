@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:8080/api/usuarios';
+const API_URL = '/api/usuarios';
 
 const formCadastro = document.getElementById('formCadastro');
 if (formCadastro) {

@@ -45,4 +45,7 @@ public class Estabelecimento extends Usuario {
     @Lob
     @Column(columnDefinition = "LONGTEXT")
     private String fotosGaleria;
+
+    @Column(columnDefinition = "boolean default false")
+    private Boolean verificadoAdmin = false;
 }

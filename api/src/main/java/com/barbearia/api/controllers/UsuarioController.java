@@ -78,6 +78,10 @@ public class UsuarioController {
                     continue;
                 }
 
+                if (!Boolean.TRUE.equals(e.getVerificadoAdmin())) {
+                    continue;
+                }
+
                 if (e.getFotoPerfil() == null || e.getFotoPerfil().trim().isEmpty()) {
                     continue;
                 }
@@ -151,6 +155,7 @@ public class UsuarioController {
         } else if (usuario instanceof Estabelecimento) {
             usuario.setRole(com.barbearia.api.models.RoleUsuario.ESTABELECIMENTO);
             ((Estabelecimento) usuario).setPerfilCompleto(false);
+            ((Estabelecimento) usuario).setVerificadoAdmin(false);
         } else {
             return ResponseEntity.badRequest().build();
         }
@@ -403,6 +408,66 @@ public class UsuarioController {
                 String galeriaSegura = body.get("fotosGaleria").replaceAll("<[^>]*>", "").replace("javascript:", "");
                 ((Estabelecimento) u).setFotosGaleria(galeriaSegura);
                 return ResponseEntity.ok(repository.save(u));
+            }
+            return ResponseEntity.badRequest().build();
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping
+    public ResponseEntity<?> listarTodos() {
+        Usuario admin = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (!admin.getRole().name().equals("ADMIN")) {
+            return ResponseEntity.status(403).build();
+        }
+        return ResponseEntity.ok(repository.findAll());
+    }
+
+    @GetMapping("/estabelecimentos/pendentes")
+    public ResponseEntity<?> listarEstabelecimentosPendentes() {
+        Usuario admin = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (!admin.getRole().name().equals("ADMIN")) {
+            return ResponseEntity.status(403).build();
+        }
+
+        List<Usuario> todos = repository.findAll();
+        List<Map<String, Object>> pendentes = new ArrayList<>();
+
+        for (Usuario u : todos) {
+            if (u instanceof Estabelecimento) {
+                Estabelecimento e = (Estabelecimento) u;
+                if (!Boolean.TRUE.equals(e.getVerificadoAdmin())) {
+                    pendentes.add(Map.of(
+                            "id", e.getId(),
+                            "nome", e.getNomeBarbearia() != null ? e.getNomeBarbearia() : e.getNome(),
+                            "email", e.getEmail(),
+                            "cidade", e.getCidade() != null ? e.getCidade() : "Não informada",
+                            "perfilCompleto", e.getPerfilCompleto()));
+                }
+            }
+        }
+        return ResponseEntity.ok(pendentes);
+    }
+
+    @PutMapping("/estabelecimentos/{id}/aprovar")
+    public ResponseEntity<?> aprovarEstabelecimento(@PathVariable Long id) {
+        Usuario admin = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (!admin.getRole().name().equals("ADMIN")) {
+            return ResponseEntity.status(403).build();
+        }
+
+        return repository.findById(id).map(u -> {
+            if (u instanceof Estabelecimento) {
+                ((Estabelecimento) u).setVerificadoAdmin(true);
+                repository.save(u);
+
+                try {
+                    emailService.enviarEmail(u.getEmail(),
+                            "Parabéns! O seu estabelecimento foi aprovado 🎉",
+                            "Olá!\n\nA nossa equipe verificou os seus dados e o seu estabelecimento já está visível para os clientes na plataforma.\n\nBons negócios!");
+                } catch (Exception ignored) {
+                }
+
+                return ResponseEntity.ok(Map.of("mensagem", "Estabelecimento aprovado com sucesso!"));
             }
             return ResponseEntity.badRequest().build();
         }).orElse(ResponseEntity.notFound().build());

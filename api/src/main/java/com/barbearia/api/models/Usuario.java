@@ -20,6 +20,7 @@ import lombok.AllArgsConstructor;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXISTING_PROPERTY, property = "role", visible = true)
 @JsonSubTypes({
         @JsonSubTypes.Type(value = Cliente.class, name = "CLIENTE"),
+        @JsonSubTypes.Type(value = Cliente.class, name = "ADMIN"),
         @JsonSubTypes.Type(value = Estabelecimento.class, name = "ESTABELECIMENTO")
 })
 @Getter

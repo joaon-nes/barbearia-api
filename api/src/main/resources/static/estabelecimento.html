@@ -752,7 +752,7 @@
             reader.onload = async (ev) => {
                 const base64 = ev.target.result;
                 document.getElementById('capaBarbearia').style.backgroundImage = `url(${base64})`;
-                await fetch(`http://localhost:8080/api/usuarios/${usuarioAtual.id}/foto`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ fotoPerfil: base64 }) });
+                await fetch(`/api/usuarios/${usuarioAtual.id}/foto`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ fotoPerfil: base64 }) });
                 usuarioAtual.fotoPerfil = base64; localStorage.setItem('usuarioLogado', JSON.stringify(usuarioAtual));
             };
             reader.readAsDataURL(e.target.files[0]);
@@ -782,7 +782,7 @@
 
         async function verificarNovosAgendamentos() {
             try {
-                const res = await fetch(`http://localhost:8080/api/agendamentos/estabelecimento/${usuarioAtual.id}`, { headers: getHeaders() });
+                const res = await fetch(`/api/agendamentos/estabelecimento/${usuarioAtual.id}`, { headers: getHeaders() });
                 if (!res.ok) return;
                 const agendamentosRefresh = await res.json();
                 if (agendamentosRefresh.length > 0) {
@@ -812,7 +812,7 @@
 
         async function buscarAgendamentosDaApi(dataIso = null) {
             try {
-                const res = await fetch(`http://localhost:8080/api/agendamentos/estabelecimento/${usuarioAtual.id}`, { headers: getHeaders() });
+                const res = await fetch(`/api/agendamentos/estabelecimento/${usuarioAtual.id}`, { headers: getHeaders() });
                 if (res.status === 401 || res.status === 403) { logout(); return; }
                 if (!res.ok) return;
                 todosMeusAgendamentos = await res.json();
@@ -918,7 +918,7 @@
         async function cancelarDiaInteiro(dataIso) {
             if (!confirm("Tem certeza que deseja fechar o estabelecimento neste dia?\n\n- Agendamentos cancelados.\n- E-mails disparados.")) return;
             try {
-                const response = await fetch(`http://localhost:8080/api/agendamentos/estabelecimento/${usuarioAtual.id}/fechar-dia`, { method: 'POST', headers: getHeaders(), body: JSON.stringify({ data: dataIso }) });
+                const response = await fetch(`/api/agendamentos/estabelecimento/${usuarioAtual.id}/fechar-dia`, { method: 'POST', headers: getHeaders(), body: JSON.stringify({ data: dataIso }) });
                 if (!response.ok) { alert("Erro ao fechar."); return; }
 
                 let diasAtuais = usuarioAtual.diasFechados || "";
@@ -936,7 +936,7 @@
         async function reabrirDia(dataIso) {
             if (!confirm("Deseja reabrir este dia?")) return;
             try {
-                const response = await fetch(`http://localhost:8080/api/agendamentos/estabelecimento/${usuarioAtual.id}/reabrir-dia`, { method: 'POST', headers: getHeaders(), body: JSON.stringify({ data: dataIso }) });
+                const response = await fetch(`/api/agendamentos/estabelecimento/${usuarioAtual.id}/reabrir-dia`, { method: 'POST', headers: getHeaders(), body: JSON.stringify({ data: dataIso }) });
                 if (!response.ok) { alert("Erro ao reabrir."); return; }
 
                 if (usuarioAtual.diasFechados) {
@@ -952,7 +952,7 @@
 
         async function mudarStatus(id, status, dataIso) {
             if (!confirm(`Confirmar ação?`)) return;
-            await fetch(`http://localhost:8080/api/agendamentos/${id}/status`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ status }) });
+            await fetch(`/api/agendamentos/${id}/status`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ status }) });
             buscarAgendamentosDaApi(dataIso);
         }
 
@@ -967,17 +967,17 @@
             if (!data || !hora) { alert("Selecione data e horário."); return; }
             hora = hora.substring(0, 5);
             try {
-                const response = await fetch(`http://localhost:8080/api/agendamentos/${id}/propor-reagendamento`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ dataHoraProposta: `${data}T${hora}:00`, quemSugeriu: 'ESTABELECIMENTO' }) });
+                const response = await fetch(`/api/agendamentos/${id}/propor-reagendamento`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ dataHoraProposta: `${data}T${hora}:00`, quemSugeriu: 'ESTABELECIMENTO' }) });
                 if (!response.ok) { const error = await response.json(); alert("Aviso: " + (error.erro || "Horário indisponível")); return; }
                 alert("Proposta enviada!"); location.reload();
             } catch (e) { alert("Erro de rede."); }
         }
-        async function aceitarPropostaEst(id) { await fetch(`http://localhost:8080/api/agendamentos/${id}/confirmar-reagendamento`, { method: 'PUT', headers: getHeaders() }); alert("Aceito!"); location.reload(); }
-        async function excluirAgendamentoDefinitivo(id) { if (!confirm("Apagar registro?")) return; await fetch(`http://localhost:8080/api/agendamentos/${id}`, { method: 'DELETE', headers: getHeaders() }); location.reload(); }
+        async function aceitarPropostaEst(id) { await fetch(`/api/agendamentos/${id}/confirmar-reagendamento`, { method: 'PUT', headers: getHeaders() }); alert("Aceito!"); location.reload(); }
+        async function excluirAgendamentoDefinitivo(id) { if (!confirm("Apagar registro?")) return; await fetch(`/api/agendamentos/${id}`, { method: 'DELETE', headers: getHeaders() }); location.reload(); }
 
         async function carregarBarbeirosEst() {
             try {
-                const res = await fetch(`http://localhost:8080/api/barbeiros/estabelecimento/${usuarioAtual.id}`, { headers: getHeaders() });
+                const res = await fetch(`/api/barbeiros/estabelecimento/${usuarioAtual.id}`, { headers: getHeaders() });
                 const barbeiros = await res.json();
 
                 const listaDiv = document.getElementById('listaBarbeiros');
@@ -1009,21 +1009,21 @@
 
         async function excluirBarbeiro(id) {
             if (!confirm("Tem certeza que deseja excluir este profissional? Ele deixará de aparecer para os clientes.")) return;
-            await fetch(`http://localhost:8080/api/barbeiros/${id}`, { method: 'DELETE', headers: getHeaders() }); carregarBarbeirosEst();
+            await fetch(`/api/barbeiros/${id}`, { method: 'DELETE', headers: getHeaders() }); carregarBarbeirosEst();
         }
 
         document.getElementById('formBarbeiro').onsubmit = async (e) => {
             e.preventDefault(); const btn = e.target.querySelector('button'); btn.disabled = true; btn.innerText = 'A guardar...';
             const nome = document.getElementById('nomeBarbeiro').value;
             try {
-                if (idBarbeiroEdicao) { await fetch(`http://localhost:8080/api/barbeiros/${idBarbeiroEdicao}`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ nome: nome }) }); }
-                else { await fetch(`http://localhost:8080/api/barbeiros/estabelecimento/${usuarioAtual.id}`, { method: 'POST', headers: getHeaders(), body: JSON.stringify({ nome: nome, ativo: true }) }); }
+                if (idBarbeiroEdicao) { await fetch(`/api/barbeiros/${idBarbeiroEdicao}`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ nome: nome }) }); }
+                else { await fetch(`/api/barbeiros/estabelecimento/${usuarioAtual.id}`, { method: 'POST', headers: getHeaders(), body: JSON.stringify({ nome: nome, ativo: true }) }); }
                 document.getElementById('formBarbeiro').reset(); idBarbeiroEdicao = null; btn.innerText = 'Adicionar'; carregarBarbeirosEst();
             } catch (error) { alert("Erro."); } finally { btn.disabled = false; }
         };
 
         async function carregarServicos() {
-            const res = await fetch(`http://localhost:8080/api/servicos/estabelecimento/${usuarioAtual.id}`, { headers: getHeaders() });
+            const res = await fetch(`/api/servicos/estabelecimento/${usuarioAtual.id}`, { headers: getHeaders() });
             servicosCache = await res.json();
             document.getElementById('listaServicos').innerHTML = servicosCache.map(s => `
                 <div class="card card-custom p-3 mb-2 d-flex flex-row justify-content-between align-items-center bg-white border-0 shadow-sm">
@@ -1044,11 +1044,11 @@
         document.getElementById('formServico').onsubmit = async (e) => {
             e.preventDefault(); const id = document.getElementById('idServicoEdicao').value;
             const dados = { nome: document.getElementById('nomeServico').value, preco: document.getElementById('precoServico').value, duracaoMinutos: document.getElementById('duracaoServico').value };
-            const url = id ? `http://localhost:8080/api/servicos/${id}` : `http://localhost:8080/api/servicos/estabelecimento/${usuarioAtual.id}`;
+            const url = id ? `/api/servicos/${id}` : `/api/servicos/estabelecimento/${usuarioAtual.id}`;
             await fetch(url, { method: id ? 'PUT' : 'POST', headers: getHeaders(), body: JSON.stringify(dados) });
             cancelarEdicaoServico(); carregarServicos();
         };
-        async function eliminarServico(id) { if (confirm("Eliminar serviço?")) { await fetch(`http://localhost:8080/api/servicos/${id}`, { method: 'DELETE', headers: getHeaders() }); carregarServicos(); } }
+        async function eliminarServico(id) { if (confirm("Eliminar serviço?")) { await fetch(`/api/servicos/${id}`, { method: 'DELETE', headers: getHeaders() }); carregarServicos(); } }
 
         function renderizarGaleriaEdit() {
             const container = document.getElementById('editGaleriaContainer');
@@ -1068,11 +1068,11 @@
             }
         }
         function removerFotoGaleria(index) { fotosGaleriaAtual.splice(index, 1); renderizarGaleriaEdit(); salvarGaleriaNoBackEnd(); }
-        async function salvarGaleriaNoBackEnd() { usuarioAtual.fotosGaleria = JSON.stringify(fotosGaleriaAtual); localStorage.setItem('usuarioLogado', JSON.stringify(usuarioAtual)); try { await fetch(`http://localhost:8080/api/usuarios/${usuarioAtual.id}/galeria`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ fotosGaleria: usuarioAtual.fotosGaleria }) }); } catch (e) { } }
-        async function salvarTags() { let tagsVal = document.getElementById('editTags').value; usuarioAtual.tags = tagsVal; localStorage.setItem('usuarioLogado', JSON.stringify(usuarioAtual)); await fetch(`http://localhost:8080/api/usuarios/${usuarioAtual.id}/tags`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ tags: tagsVal }) }); alert("Especialidades guardadas!"); }
+        async function salvarGaleriaNoBackEnd() { usuarioAtual.fotosGaleria = JSON.stringify(fotosGaleriaAtual); localStorage.setItem('usuarioLogado', JSON.stringify(usuarioAtual)); try { await fetch(`/api/usuarios/${usuarioAtual.id}/galeria`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ fotosGaleria: usuarioAtual.fotosGaleria }) }); } catch (e) { } }
+        async function salvarTags() { let tagsVal = document.getElementById('editTags').value; usuarioAtual.tags = tagsVal; localStorage.setItem('usuarioLogado', JSON.stringify(usuarioAtual)); await fetch(`/api/usuarios/${usuarioAtual.id}/tags`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ tags: tagsVal }) }); alert("Especialidades guardadas!"); }
 
         async function carregarAvaliacoes() {
-            const res = await fetch(`http://localhost:8080/api/agendamentos/estabelecimento/${usuarioAtual.id}`, { headers: getHeaders() }); const todos = await res.json();
+            const res = await fetch(`/api/agendamentos/estabelecimento/${usuarioAtual.id}`, { headers: getHeaders() }); const todos = await res.json();
             const minhasAvaliacoes = todos.filter(ag => ag.notaAvaliacao != null).sort((a, b) => { let dataA = new Date(a.dataAvaliacao || a.dataHoraInicio); let dataB = new Date(b.dataAvaliacao || b.dataHoraInicio); return dataB - dataA; });
             const naoRespondidas = minhasAvaliacoes.filter(ag => !ag.respostaAvaliacao).length; const badge = document.getElementById('badgeNotificacao');
             if (naoRespondidas > 0) { badge.innerText = naoRespondidas; badge.style.display = 'block'; } else { badge.style.display = 'none'; }
@@ -1094,7 +1094,7 @@
             }).join('');
         }
         function abrirModalResponder(id) { document.getElementById('idAgendamentoResponder').value = id; document.getElementById('textoResposta').value = ''; new bootstrap.Modal('#modalResponder').show(); }
-        async function enviarResposta() { let id = document.getElementById('idAgendamentoResponder').value; let resp = document.getElementById('textoResposta').value; if (resp && resp.trim() !== '') { await fetch(`http://localhost:8080/api/agendamentos/${id}/responder-avaliacao`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ resposta: resp }) }); location.reload(); } else { alert("A resposta não pode estar vazia."); } }
+        async function enviarResposta() { let id = document.getElementById('idAgendamentoResponder').value; let resp = document.getElementById('textoResposta').value; if (resp && resp.trim() !== '') { await fetch(`/api/agendamentos/${id}/responder-avaliacao`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify({ resposta: resp }) }); location.reload(); } else { alert("A resposta não pode estar vazia."); } }
 
         function gerarRelatorioFinanceiro() {
             const periodo = document.getElementById('filtroPeriodoFin').value;
@@ -1268,7 +1268,7 @@
             };
 
             const token = localStorage.getItem('token');
-            const res = await fetch(`http://localhost:8080/api/usuarios/${usuarioAtual.id}/completar-perfil`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify(dados) });
+            const res = await fetch(`/api/usuarios/${usuarioAtual.id}/completar-perfil`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify(dados) });
             const at = await res.json(); localStorage.setItem('usuarioLogado', JSON.stringify(at)); alert("Perfil Atualizado com Sucesso!"); window.location.reload();
         };
 
@@ -1296,7 +1296,7 @@
             let id = document.getElementById('idAgConcluir').value;
             let dataIso = document.getElementById('dataIsoConcluir').value;
 
-            await fetch(`http://localhost:8080/api/agendamentos/${id}/status`, {
+            await fetch(`/api/agendamentos/${id}/status`, {
                 method: 'PUT', headers: getHeaders(), body: JSON.stringify({ status: 'CONCLUIDO' })
             });
 
@@ -1304,7 +1304,7 @@
                 let nota = document.getElementById('notaCliente').value;
 
                 if (parseInt(nota) > 0) {
-                    await fetch(`http://localhost:8080/api/agendamentos/${id}/avaliar-cliente`, {
+                    await fetch(`/api/agendamentos/${id}/avaliar-cliente`, {
                         method: 'PUT', headers: getHeaders(),
                         body: JSON.stringify({ notaCliente: parseInt(nota) })
                     });

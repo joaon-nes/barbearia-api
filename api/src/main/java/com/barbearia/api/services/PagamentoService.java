@@ -19,7 +19,7 @@ public class PagamentoService {
     @Value("${abacatepay.api.key}")
     private String apiKey;
 
-    @Value("${app.frontend.url:http://127.0.0.1:5500/api/src/main/resources/statics/cliente.html}")
+    @Value("${FRONTEND_URL}")
     private String urlFrontend;
 
     public String gerarLinkDePagamento(Agendamento agendamento) {
