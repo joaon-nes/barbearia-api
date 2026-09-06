@@ -26,13 +26,13 @@ public class JwtService {
         if (secret == null || secret.trim().isEmpty()) {
             throw new IllegalStateException("FATAL (Segurança): A variável 'jwt.secret' não está configurada no ambiente. A aplicação não pode iniciar.");
         }
-        if (secret.getBytes().length < 32) {
+        if (secret.getBytes(java.nio.charset.StandardCharsets.UTF_8).length < 32) {
             throw new IllegalStateException("FATAL (Segurança): A 'jwt.secret' deve ter pelo menos 32 bytes para o algoritmo HS256.");
         }
     }
 
     private Key getSigningKey() {
-        return Keys.hmacShaKeyFor(secret.getBytes());
+        return Keys.hmacShaKeyFor(secret.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
     public String gerarToken(Usuario usuario) {

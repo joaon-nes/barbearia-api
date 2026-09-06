@@ -79,7 +79,7 @@ public class AgendamentoService {
         return repository.findByEstabelecimentoId(estabelecimentoId);
     }
 
-    @Transactional
+    @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public Agendamento criar(Agendamento agendamento) {
         if (agendamento.getDataHoraInicio().isBefore(LocalDateTime.now(ZoneId.of("America/Sao_Paulo")))) {
             throw new IllegalArgumentException("Não é possível agendar um horário no passado.");
@@ -95,8 +95,12 @@ public class AgendamentoService {
             throw new IllegalArgumentException("O ID informado não pertence a um Cliente válido.");
         }
         Cliente cliente = (Cliente) usuarioCliente;
+        if ("DINHEIRO".equals(agendamento.getFormaPagamento()) && !podePagarEmDinheiro(cliente.getId())) {
+            throw new IllegalArgumentException("Pagamento em dinheiro disponível após o primeiro atendimento concluído.");
+        }
 
-        int agendamentosAtivos = repository.countByClienteIdAndStatus(cliente.getId(), StatusAgendamento.AGENDADO);
+        int agendamentosAtivos = repository.countByClienteIdAndStatusIn(cliente.getId(),
+                List.of(StatusAgendamento.AGENDADO, StatusAgendamento.REAGENDAMENTO_PENDENTE));
         int limitePermitido = Boolean.TRUE.equals(cliente.getContaVerificada()) ? 3 : 1;
 
         if (agendamentosAtivos >= limitePermitido) {
@@ -127,9 +131,20 @@ public class AgendamentoService {
         if (agendamento.getBarbeiro() == null || agendamento.getBarbeiro().getId() == null) {
             throw new IllegalArgumentException("É obrigatório selecionar um barbeiro.");
         }
-        com.barbearia.api.models.Barbeiro barbeiro = barbeiroRepository.findById(agendamento.getBarbeiro().getId())
+        com.barbearia.api.models.Barbeiro barbeiro = barbeiroRepository.findByIdComBloqueio(agendamento.getBarbeiro().getId())
                 .orElseThrow(() -> new IllegalArgumentException("Barbeiro não encontrado."));
 
+        if (!servico.getEstabelecimento().getId().equals(estabelecimento.getId())
+                || !barbeiro.getEstabelecimento().getId().equals(estabelecimento.getId())
+                || !Boolean.TRUE.equals(barbeiro.getAtivo())
+                || !Boolean.TRUE.equals(estabelecimento.getAtivo())
+                || !Boolean.TRUE.equals(estabelecimento.getVerificadoAdmin())) {
+            throw new IllegalArgumentException("Serviço, profissional ou estabelecimento indisponível.");
+        }
+        if (servico.getDuracaoMinutos() == null || servico.getDuracaoMinutos() <= 0
+                || servico.getDuracaoMinutos() > 720) {
+            throw new IllegalArgumentException("Duração do serviço inválida.");
+        }
         agendamento.setServico(servico);
         agendamento.setCliente(cliente);
         agendamento.setEstabelecimento(estabelecimento);
@@ -201,7 +216,15 @@ public class AgendamentoService {
         }
 
         Servico servico = servicoRepository.findById(servicoId).orElseThrow();
+        var profissional = barbeiroRepository.findById(barbeiroId)
+                .orElseThrow(() -> new IllegalArgumentException("Barbeiro não encontrado."));
+        if (!servico.getEstabelecimento().getId().equals(estabelecimentoId)
+                || !profissional.getEstabelecimento().getId().equals(estabelecimentoId)
+                || !Boolean.TRUE.equals(profissional.getAtivo())) {
+            throw new IllegalArgumentException("Serviço ou profissional de outro estabelecimento.");
+        }
         int duracao = servico.getDuracaoMinutos();
+        if (duracao <= 0 || duracao > 720) throw new IllegalArgumentException("Duração inválida.");
         String[] nomesDias = { "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo" };
         String diaDaSemana = nomesDias[data.getDayOfWeek().getValue() - 1];
         String hrJson = est.getHorariosFuncionamento();
@@ -241,11 +264,12 @@ public class AgendamentoService {
         if (abertura == null || fechamento == null || abertura.isBlank() || fechamento.isBlank())
             return;
 
-        LocalTime horaAtual = LocalTime.parse(abertura);
-        LocalTime horaFimTurno = LocalTime.parse(fechamento);
+        if (duracaoServico <= 0 || duracaoServico > 720) return;
+        LocalDateTime horaAtual = data.atTime(LocalTime.parse(abertura));
+        LocalDateTime horaFimTurno = data.atTime(LocalTime.parse(fechamento));
 
         while (horaAtual.plusMinutes(duracaoServico).compareTo(horaFimTurno) <= 0) {
-            LocalDateTime inicioSlot = data.atTime(horaAtual);
+            LocalDateTime inicioSlot = horaAtual;
 
             if (inicioSlot.isBefore(LocalDateTime.now())) {
                 horaAtual = horaAtual.plusMinutes(duracaoServico);
@@ -261,16 +285,16 @@ public class AgendamentoService {
             });
 
             if (!conflito) {
-                slots.add(horaAtual.toString().substring(0, 5));
+                slots.add(horaAtual.toLocalTime().toString().substring(0, 5));
             }
 
             horaAtual = horaAtual.plusMinutes(duracaoServico);
         }
     }
 
-    @Transactional
+    @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public Optional<Agendamento> atualizarStatus(Long id, StatusAgendamento novoStatus, Long usuarioLogadoId) {
-        return repository.findById(id).map(ag -> {
+        return repository.findByIdComBloqueio(id).map(ag -> {
 
             if (!ag.getEstabelecimento().getId().equals(usuarioLogadoId)
                     && !ag.getCliente().getId().equals(usuarioLogadoId)) {
@@ -297,13 +321,13 @@ public class AgendamentoService {
         });
     }
 
-    @Transactional
+    @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public Optional<Agendamento> avaliar(Long id, Integer nota, String comentario) {
         if (nota == null || nota < 1 || nota > 5) {
             throw new IllegalArgumentException("A nota de avaliação deve ser um valor numérico entre 1 e 5.");
         }
 
-        return repository.findById(id).map(ag -> {
+        return repository.findByIdComBloqueio(id).map(ag -> {
             if (ag.getStatus() != StatusAgendamento.CONCLUIDO) {
                 throw new IllegalArgumentException("Apenas serviços concluídos podem ser avaliados.");
             }
@@ -331,9 +355,9 @@ public class AgendamentoService {
         });
     }
 
-    @Transactional
+    @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public Optional<Agendamento> responderAvaliacao(Long id, String resposta, Long usuarioLogadoId) {
-        return repository.findById(id).map(ag -> {
+        return repository.findByIdComBloqueio(id).map(ag -> {
             if (!ag.getEstabelecimento().getId().equals(usuarioLogadoId)) {
                 throw new SecurityException("Operação não permitida.");
             }
@@ -344,18 +368,30 @@ public class AgendamentoService {
         });
     }
 
-    @Transactional
+    @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public void eliminar(Long id) {
-        repository.deleteById(id);
+        var ag = repository.findByIdComBloqueio(id)
+                .orElseThrow(() -> new IllegalArgumentException("Agendamento não encontrado."));
+        if (ag.getStatus() != StatusAgendamento.CANCELADO || ag.getBillingId() != null
+                || ag.getStatusPagamento() == StatusPagamento.PAGO) {
+            throw new IllegalArgumentException("Somente agendamentos cancelados sem cobrança podem ser excluídos.");
+        }
+        repository.delete(ag);
     }
 
-    @Transactional
+    @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public Optional<Agendamento> reagendar(Long id, LocalDateTime novaDataHora) {
         if (novaDataHora.isBefore(LocalDateTime.now())) {
             throw new IllegalArgumentException("Não é possível reagendar para um horário no passado.");
         }
 
-        return repository.findById(id).map(agendamento -> {
+        return repository.findByIdComBloqueio(id).map(agendamento -> {
+            if (agendamento.getStatus() == StatusAgendamento.CANCELADO
+                    || agendamento.getStatus() == StatusAgendamento.CONCLUIDO) {
+                throw new IllegalArgumentException("Agendamento finalizado não pode ser reagendado.");
+            }
+            barbeiroRepository.findByIdComBloqueio(agendamento.getBarbeiro().getId())
+                    .orElseThrow(() -> new IllegalArgumentException("Barbeiro não encontrado."));
             LocalDateTime fimNovo = novaDataHora.plusMinutes(agendamento.getServico().getDuracaoMinutos());
             LocalDateTime inicioDia = novaDataHora.toLocalDate().atStartOfDay();
             LocalDateTime fimDia = inicioDia.plusDays(1).minusNanos(1);
@@ -380,13 +416,19 @@ public class AgendamentoService {
         });
     }
 
-    @Transactional
+    @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public Optional<Agendamento> proporReagendamento(Long id, LocalDateTime novaDataHora, String quemSugeriu) {
         if (novaDataHora.isBefore(LocalDateTime.now())) {
             throw new IllegalArgumentException("Não é possível propor um horário no passado.");
         }
 
-        return repository.findById(id).map(agendamento -> {
+        return repository.findByIdComBloqueio(id).map(agendamento -> {
+            if (agendamento.getStatus() == StatusAgendamento.CANCELADO
+                    || agendamento.getStatus() == StatusAgendamento.CONCLUIDO) {
+                throw new IllegalArgumentException("Agendamento finalizado não pode ser reagendado.");
+            }
+            barbeiroRepository.findByIdComBloqueio(agendamento.getBarbeiro().getId())
+                    .orElseThrow(() -> new IllegalArgumentException("Barbeiro não encontrado."));
             LocalDateTime fimNovo = novaDataHora.plusMinutes(agendamento.getServico().getDuracaoMinutos());
             LocalDateTime inicioDia = novaDataHora.toLocalDate().atStartOfDay();
             LocalDateTime fimDia = inicioDia.plusDays(1).minusNanos(1);
@@ -423,11 +465,20 @@ public class AgendamentoService {
         });
     }
 
-    @Transactional
+    @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public Optional<Agendamento> confirmarReagendamento(Long id) {
-        return repository.findById(id).map(agendamento -> {
+        return repository.findByIdComBloqueio(id).map(agendamento -> {
+            if (agendamento.getStatus() == StatusAgendamento.CANCELADO
+                    || agendamento.getStatus() == StatusAgendamento.CONCLUIDO) {
+                throw new IllegalArgumentException("Agendamento finalizado não pode ser reagendado.");
+            }
+            barbeiroRepository.findByIdComBloqueio(agendamento.getBarbeiro().getId())
+                    .orElseThrow(() -> new IllegalArgumentException("Barbeiro não encontrado."));
             if (agendamento.getDataHoraProposta() != null) {
                 LocalDateTime novaDataHora = agendamento.getDataHoraProposta();
+                if (!novaDataHora.isAfter(LocalDateTime.now())) {
+                    throw new IllegalArgumentException("A proposta expirou.");
+                }
                 LocalDateTime fimNovo = novaDataHora.plusMinutes(agendamento.getServico().getDuracaoMinutos());
                 LocalDateTime inicioDia = novaDataHora.toLocalDate().atStartOfDay();
                 LocalDateTime fimDia = inicioDia.plusDays(1).minusNanos(1);
@@ -458,7 +509,7 @@ public class AgendamentoService {
         });
     }
 
-    @Transactional
+    @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public int fecharDia(Long estabelecimentoId, java.time.LocalDate data) {
         LocalDateTime inicioDia = data.atStartOfDay();
         LocalDateTime fimDia = inicioDia.plusDays(1).minusNanos(1);
@@ -507,7 +558,7 @@ public class AgendamentoService {
         return cancelados;
     }
 
-    @Transactional
+    @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public void reabrirDia(Long estabelecimentoId, java.time.LocalDate data) {
         Usuario user = usuarioRepository.findById(estabelecimentoId).orElse(null);
         if (user instanceof Estabelecimento) {
@@ -523,7 +574,7 @@ public class AgendamentoService {
         }
     }
 
-    @Transactional
+    @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public void atualizarStatusPagamento(Long id, StatusPagamento novoStatus) {
         Agendamento agendamento = repository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Agendamento não encontrado."));
@@ -537,7 +588,7 @@ public class AgendamentoService {
         return atendimentosFinalizados > 0;
     }
 
-    @Transactional
+    @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public Agendamento avaliarCliente(Long id, Map<String, Object> payload) {
         Agendamento ag = repository.findById(id).orElseThrow(() -> new RuntimeException("Agendamento não encontrado"));
 

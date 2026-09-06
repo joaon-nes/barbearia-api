@@ -28,8 +28,7 @@ public class AgendamentoController {
     private final AgendamentoService service;
     private final ServicoRepository servicoRepository;
 
-    @Autowired
-    private com.barbearia.api.services.PagamentoService pagamentoService;
+    private final com.barbearia.api.services.PagamentoService pagamentoService;
 
     @GetMapping
     public ResponseEntity<List<Agendamento>> listarTodos() {
@@ -56,7 +55,7 @@ public class AgendamentoController {
     }
 
     @PostMapping
-    public ResponseEntity<?> criar(@Valid @RequestBody Agendamento agendamento) {
+    public ResponseEntity<?> criar(@Valid @RequestBody com.barbearia.api.dto.AgendamentoRequest dados) {
         try {
             Usuario usuarioLogado = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
@@ -64,7 +63,7 @@ public class AgendamentoController {
                 return ResponseEntity.status(403).body(Map.of("erro", "Apenas clientes podem criar agendamentos."));
             }
 
-            agendamento.setId(null);
+            Agendamento agendamento = dados.novoAgendamento();
             agendamento.setCliente((Cliente) usuarioLogado);
 
             var servicoCompleto = servicoRepository.findById(agendamento.getServico().getId())
@@ -96,6 +95,9 @@ public class AgendamentoController {
             }
 
             StatusAgendamento novoStatus = StatusAgendamento.valueOf(body.get("status"));
+            if (novoStatus != StatusAgendamento.CONCLUIDO && novoStatus != StatusAgendamento.CANCELADO) {
+                return ResponseEntity.badRequest().body(Map.of("erro", "Use o fluxo de reagendamento para alterar a agenda."));
+            }
 
             if (usuarioLogado instanceof Cliente && novoStatus != StatusAgendamento.CANCELADO) {
                 return ResponseEntity.status(403)
@@ -246,49 +248,27 @@ public class AgendamentoController {
             return ResponseEntity.ok(agendamentos);
         }
 
-        List<Agendamento> agendamentosSeguros = agendamentos.stream().map(ag -> {
-            Agendamento seguro = new Agendamento();
-            seguro.setId(ag.getId());
-            seguro.setDataHoraInicio(ag.getDataHoraInicio());
-            seguro.setDataHoraProposta(ag.getDataHoraProposta());
-            seguro.setStatus(ag.getStatus());
-            seguro.setNotaAvaliacao(ag.getNotaAvaliacao());
-            seguro.setComentarioAvaliacao(ag.getComentarioAvaliacao());
-            seguro.setRespostaAvaliacao(ag.getRespostaAvaliacao());
-            seguro.setDataAvaliacao(ag.getDataAvaliacao());
-            seguro.setDataResposta(ag.getDataResposta());
-
-            if (ag.getServico() != null) {
-                Servico s = new Servico();
-                s.setId(ag.getServico().getId());
-                s.setNome(ag.getServico().getNome());
-                s.setPreco(ag.getServico().getPreco());
-                s.setDuracaoMinutos(ag.getServico().getDuracaoMinutos());
-                seguro.setServico(s);
-            }
-
-            if (ag.getBarbeiro() != null) {
-                Barbeiro b = new Barbeiro();
-                b.setId(ag.getBarbeiro().getId());
-                b.setNome(ag.getBarbeiro().getNome());
-                seguro.setBarbeiro(b);
-            }
-
-            if (ag.getCliente() != null) {
-                Cliente cliSeguro = new Cliente();
-                cliSeguro.setNome(ag.getCliente().getNome().split(" ")[0]);
-                cliSeguro.setContaVerificada(ag.getCliente().getContaVerificada());
-                seguro.setCliente(cliSeguro);
-            }
-            return seguro;
-        }).toList();
-
-        return ResponseEntity.ok(agendamentosSeguros);
+        var avaliacoes = agendamentos.stream()
+                .filter(ag -> ag.getStatus() == StatusAgendamento.CONCLUIDO && ag.getNotaAvaliacao() != null)
+                .map(ag -> {
+                    Map<String, Object> item = new java.util.HashMap<>();
+                    item.put("notaAvaliacao", ag.getNotaAvaliacao());
+                    item.put("comentarioAvaliacao", ag.getComentarioAvaliacao());
+                    item.put("respostaAvaliacao", ag.getRespostaAvaliacao());
+                    item.put("dataAvaliacao", ag.getDataAvaliacao());
+                    item.put("dataResposta", ag.getDataResposta());
+                    item.put("cliente", Map.of("nome", "Cliente"));
+                    return item;
+                }).toList();
+        return ResponseEntity.ok(avaliacoes);
     }
 
     @PutMapping("/{id}/reagendar")
     public ResponseEntity<?> reagendar(@PathVariable Long id, @RequestBody Map<String, String> body) {
         Usuario usuarioLogado = (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (usuarioLogado.getRole() != com.barbearia.api.models.RoleUsuario.ADMIN) {
+            return ResponseEntity.status(403).body(Map.of("erro", "Use a proposta de reagendamento para obter aprovação."));
+        }
         try {
             Agendamento agendamento = service.buscarPorId(id)
                     .orElseThrow(() -> new IllegalArgumentException("Agendamento não encontrado."));
@@ -334,7 +314,7 @@ public class AgendamentoController {
             }
 
             java.time.LocalDateTime novaData = java.time.LocalDateTime.parse(dataHoraStr);
-            String autor = body.get("quemSugeriu").toString();
+            String autor = usuarioLogado.getRole().name();
 
             return service.proporReagendamento(id, novaData, autor)
                     .map(ResponseEntity::ok)

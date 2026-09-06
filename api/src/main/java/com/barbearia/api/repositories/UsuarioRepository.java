@@ -17,6 +17,10 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
         Optional<Usuario> findByEmail(String email);
 
+        @Lock(LockModeType.PESSIMISTIC_WRITE)
+        @Query("SELECT u FROM Usuario u WHERE u.email = :email")
+        Optional<Usuario> findByEmailComBloqueio(@Param("email") String email);
+
         boolean existsByTelefone(String telefone);
 
         @Query("SELECT DISTINCT e FROM Estabelecimento e WHERE e.ativo = true AND e.latitude IS NOT NULL AND e.longitude IS NOT NULL")

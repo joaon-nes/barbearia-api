@@ -49,10 +49,12 @@ public class Agendamento {
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "cliente_id", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"cpf", "email", "fotoPerfil", "diasFechados"})
     private Cliente cliente;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "estabelecimento_id", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"cpf", "cnpj", "email"})
     private Estabelecimento estabelecimento;
 
     @ManyToOne(fetch = FetchType.EAGER)
@@ -78,6 +80,18 @@ public class Agendamento {
     @ManyToOne
     @JoinColumn(name = "barbeiro_id", nullable = true)
     private Barbeiro barbeiro;
+
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @Column(name = "billing_id", unique = true)
+    private String billingId;
+
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @Column(name = "billing_url", length = 2048)
+    private String billingUrl;
+
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @Column(name = "billing_amount")
+    private Integer billingAmount;
 
     @Column(name = "nota_cliente")
     private Integer notaCliente;

@@ -38,10 +38,26 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleIllegalArgument(IllegalArgumentException ex) {
         Map<String, Object> response = new HashMap<>();
         response.put("timestamp", LocalDateTime.now());
-        response.put("status", HttpStatus.CONFLICT.value());
+        response.put("status", HttpStatus.BAD_REQUEST.value());
         response.put("erro", ex.getMessage());
 
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    @ExceptionHandler({org.springframework.http.converter.HttpMessageNotReadableException.class,
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class})
+    public ResponseEntity<?> handleMalformedRequest(Exception ex) {
+        return ResponseEntity.badRequest().body(Map.of("erro", "Requisição inválida."));
+    }
+
+    @ExceptionHandler({SecurityException.class, org.springframework.security.access.AccessDeniedException.class})
+    public ResponseEntity<?> handleForbidden(Exception ex) {
+        return ResponseEntity.status(403).body(Map.of("erro", "Acesso negado."));
+    }
+
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<?> handleConflict(Exception ex) {
+        return ResponseEntity.status(409).body(Map.of("erro", "Dados em conflito com um registro existente."));
     }
 
     @ExceptionHandler(Exception.class)

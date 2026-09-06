@@ -7,24 +7,19 @@ import com.barbearia.api.models.Usuario;
 import com.barbearia.api.repositories.AgendamentoRepository;
 import com.barbearia.api.repositories.UsuarioRepository;
 import com.barbearia.api.services.EmailService;
-import com.barbearia.api.services.JwtService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,14 +31,12 @@ public class UsuarioController {
 
     private final UsuarioRepository repository;
     private final EmailService emailService;
-    private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
-    private final SecureRandom secureRandom = new SecureRandom();
+    private final com.barbearia.api.services.MediaValidationService mediaValidation;
+    private final com.barbearia.api.services.AutenticacaoService autenticacaoService;
 
     private static final Logger log = LoggerFactory.getLogger(UsuarioController.class);
 
-    @Autowired
-    private AgendamentoRepository agendamentoRepository;
+    private final AgendamentoRepository agendamentoRepository;
 
     @GetMapping("/{id}")
     public ResponseEntity<?> buscarPorId(@PathVariable Long id) {
@@ -64,6 +57,10 @@ public class UsuarioController {
             @RequestParam Double lng,
             @RequestParam(defaultValue = "10.0") Double raioKm) {
 
+        if (!Double.isFinite(lat) || !Double.isFinite(lng) || !Double.isFinite(raioKm)
+                || Math.abs(lat) > 90 || Math.abs(lng) > 180 || raioKm <= 0) {
+            return ResponseEntity.badRequest().body(Map.of("erro", "Coordenadas ou raio inválidos."));
+        }
         if (raioKm > 50.0) {
             raioKm = 50.0;
         }
@@ -145,143 +142,18 @@ public class UsuarioController {
     }
 
     @PostMapping
-    public ResponseEntity<Usuario> criar(@Valid @RequestBody Usuario usuario) {
-        usuario.setAtivo(false);
-        usuario.setSenha(passwordEncoder.encode(usuario.getSenha()));
-
-        if (usuario instanceof Cliente) {
-            usuario.setRole(com.barbearia.api.models.RoleUsuario.CLIENTE);
-            ((Cliente) usuario).setContaVerificada(false);
-        } else if (usuario instanceof Estabelecimento) {
-            usuario.setRole(com.barbearia.api.models.RoleUsuario.ESTABELECIMENTO);
-            ((Estabelecimento) usuario).setPerfilCompleto(false);
-            ((Estabelecimento) usuario).setVerificadoAdmin(false);
-        } else {
-            return ResponseEntity.badRequest().build();
-        }
-
-        String codigo = String.valueOf(100000 + secureRandom.nextInt(900000));
-        usuario.setCodigo2fa(codigo);
-        usuario.setDataExpiracao2fa(java.time.LocalDateTime.now().plusMinutes(15));
-
-        Usuario salvo = repository.save(usuario);
-
-        try {
-            emailService.enviarEmail(salvo.getEmail(),
-                    "Bem-vindo à Barbearia! Confirme a sua conta",
-                    "Olá " + salvo.getNome() + "!\n\nO seu código de ativação é: " + codigo
-                            + "\n\nUse este código ao fazer o primeiro login para ativar a sua conta.");
-        } catch (Exception e) {
-            System.err.println("Aviso: Falha ao enviar e-mail - " + e.getMessage());
-        }
-
-        return ResponseEntity.ok(salvo);
+    public ResponseEntity<Usuario> criar(@Valid @RequestBody com.barbearia.api.dto.CadastroRequest dados) {
+        return autenticacaoService.criar(dados);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody Map<String, String> credenciais) {
-        String email = credenciais.get("email");
-        String senha = credenciais.get("senha");
-
-        Optional<Usuario> userOpt = repository.findByEmail(email);
-
-        if (userOpt.isPresent()) {
-            Usuario u = userOpt.get();
-            if (u.getBloqueadoAte() != null && java.time.LocalDateTime.now().isBefore(u.getBloqueadoAte())) {
-                return ResponseEntity.status(429).body("Conta bloqueada temporariamente. Tente novamente mais tarde.");
-            }
-        }
-
-        if (userOpt.isEmpty() || !passwordEncoder.matches(senha, userOpt.get().getSenha())) {
-            if (userOpt.isPresent()) {
-                Usuario u = userOpt.get();
-                u.setTentativasFalhas(u.getTentativasFalhas() + 1);
-                if (u.getTentativasFalhas() >= 5) {
-                    u.setBloqueadoAte(java.time.LocalDateTime.now().plusMinutes(15));
-                }
-                repository.save(u);
-            }
-            return ResponseEntity.status(401).body("Credenciais inválidas.");
-        }
-
-        Usuario usuario = userOpt.get();
-
-        usuario.setTentativasFalhas(0);
-        usuario.setBloqueadoAte(null);
-        repository.save(usuario);
-
-        boolean exige2fa = !Boolean.TRUE.equals(usuario.getAtivo()) || usuario instanceof Estabelecimento;
-
-        if (exige2fa) {
-            String novoCodigo = String.valueOf(100000 + secureRandom.nextInt(900000));
-            usuario.setCodigo2fa(novoCodigo);
-            usuario.setDataExpiracao2fa(java.time.LocalDateTime.now().plusMinutes(15));
-            repository.save(usuario);
-            try {
-                emailService.enviarEmail(usuario.getEmail(), "Código de Segurança 2FA",
-                        "O seu código é: " + novoCodigo);
-            } catch (Exception ignored) {
-            }
-
-            return ResponseEntity.status(202)
-                    .body(Map.of("email", usuario.getEmail(), "mensagem", "Aguardando Confirmação do 2FA"));
-        }
-
-        String token = jwtService.gerarToken(usuario);
-        if (usuario instanceof Estabelecimento
-                && !Boolean.TRUE.equals(((Estabelecimento) usuario).getPerfilCompleto())) {
-            return ResponseEntity.status(206).body(Map.of("usuario", usuario, "token", token));
-        }
-
-        return ResponseEntity.ok(Map.of("usuario", usuario, "token", token));
+    public ResponseEntity<?> login(@Valid @RequestBody com.barbearia.api.dto.LoginRequest dados) {
+        return autenticacaoService.login(dados);
     }
 
     @PostMapping("/validar-2fa")
-    public ResponseEntity<?> validar2fa(@RequestBody Map<String, String> dados) {
-        String email = dados.get("email");
-        String codigo = dados.get("codigo");
-
-        Optional<Usuario> userOpt = repository.findByEmail(email);
-        if (userOpt.isEmpty()) {
-            return ResponseEntity.status(401).body("Código ou usuário inválido.");
-        }
-
-        Usuario usuario = userOpt.get();
-
-        if (usuario.getBloqueadoAte() != null && java.time.LocalDateTime.now().isBefore(usuario.getBloqueadoAte())) {
-            return ResponseEntity.status(429).body("Muitas tentativas. Conta bloqueada temporariamente.");
-        }
-
-        if (usuario.getDataExpiracao2fa() != null
-                && java.time.LocalDateTime.now().isAfter(usuario.getDataExpiracao2fa())) {
-            return ResponseEntity.status(401).body("Código expirado. Volte e faça login novamente para gerar um novo.");
-        }
-
-        if (usuario.getCodigo2fa() != null && usuario.getCodigo2fa().equals(codigo)) {
-            usuario.setCodigo2fa(null);
-            usuario.setDataExpiracao2fa(null);
-            usuario.setTentativasFalhas(0);
-            usuario.setBloqueadoAte(null);
-            usuario.setAtivo(true);
-            repository.save(usuario);
-
-            String token = jwtService.gerarToken(usuario);
-
-            if (usuario instanceof Estabelecimento
-                    && !Boolean.TRUE.equals(((Estabelecimento) usuario).getPerfilCompleto())) {
-                return ResponseEntity.status(206).body(Map.of("usuario", usuario, "token", token));
-            }
-            return ResponseEntity.ok(Map.of("usuario", usuario, "token", token));
-        }
-
-        usuario.setTentativasFalhas(usuario.getTentativasFalhas() + 1);
-        if (usuario.getTentativasFalhas() >= 5) {
-            usuario.setBloqueadoAte(java.time.LocalDateTime.now().plusMinutes(15));
-            usuario.setCodigo2fa(null);
-        }
-        repository.save(usuario);
-
-        return ResponseEntity.status(401).body("Código inválido.");
+    public ResponseEntity<?> validar2fa(@Valid @RequestBody com.barbearia.api.dto.Codigo2faRequest dados) {
+        return autenticacaoService.validar2fa(dados);
     }
 
     @PutMapping("/{id}/completar-perfil")
@@ -390,7 +262,7 @@ public class UsuarioController {
 
         return repository.findById(id).map(u -> {
             if (body.get("fotoPerfil") != null) {
-                String fotoSegura = body.get("fotoPerfil").replaceAll("<[^>]*>", "").replace("javascript:", "");
+                String fotoSegura = mediaValidation.imagem(body.get("fotoPerfil"));
                 u.setFotoPerfil(fotoSegura);
             }
             return ResponseEntity.ok(repository.save(u));
@@ -405,7 +277,7 @@ public class UsuarioController {
 
         return repository.findById(id).map(u -> {
             if (u instanceof Estabelecimento && body.get("fotosGaleria") != null) {
-                String galeriaSegura = body.get("fotosGaleria").replaceAll("<[^>]*>", "").replace("javascript:", "");
+                String galeriaSegura = mediaValidation.galeria(body.get("fotosGaleria"));
                 ((Estabelecimento) u).setFotosGaleria(galeriaSegura);
                 return ResponseEntity.ok(repository.save(u));
             }
