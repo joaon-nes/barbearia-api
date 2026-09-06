@@ -21,6 +21,8 @@ public class Barbeiro {
     private Long id;
 
     @Column(nullable = false)
+    @jakarta.validation.constraints.NotBlank
+    @jakarta.validation.constraints.Size(max = 100)
     private String nome;
 
     @Column(nullable = false)

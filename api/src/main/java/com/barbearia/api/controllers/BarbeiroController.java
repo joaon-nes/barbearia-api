@@ -15,10 +15,10 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/barbeiros")
+@lombok.RequiredArgsConstructor
 public class BarbeiroController {
 
-    @Autowired
-    private BarbeiroRepository barbeiroRepository;
+    private final BarbeiroRepository barbeiroRepository;
 
     private Usuario getUsuarioLogado() {
         return (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -32,7 +32,7 @@ public class BarbeiroController {
 
     // rota para estabelecimento adicionar barbeiro
     @PostMapping("/estabelecimento/{estabelecimentoId}")
-    public ResponseEntity<?> criar(@PathVariable Long estabelecimentoId, @RequestBody Barbeiro barbeiro) {
+    public ResponseEntity<?> criar(@PathVariable Long estabelecimentoId, @jakarta.validation.Valid @RequestBody Barbeiro barbeiro) {
         Usuario usuarioLogado = getUsuarioLogado();
 
         if (!usuarioLogado.getId().equals(estabelecimentoId) || !(usuarioLogado instanceof Estabelecimento)) {
@@ -46,7 +46,7 @@ public class BarbeiroController {
 
     // rota para editar o barbeiro
     @PutMapping("/{id}")
-    public ResponseEntity<?> atualizar(@PathVariable Long id, @RequestBody Barbeiro barbeiroAtualizado) {
+    public ResponseEntity<?> atualizar(@PathVariable Long id, @jakarta.validation.Valid @RequestBody Barbeiro barbeiroAtualizado) {
         Usuario usuarioLogado = getUsuarioLogado();
 
         return barbeiroRepository.findById(id).map(barbeiro -> {

@@ -13,10 +13,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/servicos")
+@lombok.RequiredArgsConstructor
 public class ServicoController {
 
-    @Autowired
-    private ServicoRepository servicoRepository;
+    private final ServicoRepository servicoRepository;
 
     private Usuario getUsuarioLogado() {
         return (Usuario) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -28,7 +28,7 @@ public class ServicoController {
     }
 
     @PostMapping("/estabelecimento/{id}")
-    public ResponseEntity<?> adicionarServico(@PathVariable Long id, @RequestBody Servico servico) {
+    public ResponseEntity<?> adicionarServico(@PathVariable Long id, @jakarta.validation.Valid @RequestBody Servico servico) {
         Usuario usuarioLogado = getUsuarioLogado();
 
         if (!usuarioLogado.getId().equals(id) || !(usuarioLogado instanceof Estabelecimento)) {
@@ -43,7 +43,7 @@ public class ServicoController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> atualizarServico(@PathVariable Long id, @RequestBody Servico dados) {
+    public ResponseEntity<?> atualizarServico(@PathVariable Long id, @jakarta.validation.Valid @RequestBody Servico dados) {
         Usuario usuarioLogado = getUsuarioLogado();
 
         return servicoRepository.findById(id).map(srv -> {
